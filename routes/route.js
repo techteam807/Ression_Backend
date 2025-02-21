@@ -4,7 +4,7 @@ const router = express.Router();
 //import routes files
 const ProductRoutes = require('./productRoute');
 const TaskRoutes = require('./taskRoutes');
-const CustomerRoutes = require('./userRoutes');
+const CustomerRoutes = require('./customerRoutes');
 
 //allow to use your route files
 router.use('/tasks',TaskRoutes);

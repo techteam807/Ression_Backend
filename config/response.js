@@ -1,5 +1,5 @@
-const successResponse = (res, message, data = {}) => {
-  return res.status(200).json({ status: true, message, data });
+const successResponse = (res, message, pagination, data = {}) => {
+  return res.status(200).json({ status: true, message, pagination, data });
 };
 
 const errorResponse = (res, message, statusCode = 500) => {

@@ -37,7 +37,7 @@
 // module.exports = { fetchAndStoreCustomers };
 
 const axios = require("axios");
-const Customer = require("../models/usermodel");
+const Customer = require("../models/customerModel");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; 
 
@@ -79,8 +79,34 @@ const fetchAndStoreCustomers = async (accessToken) => {
   }
 };
 
-const getAllcustomers = async () => {
-  return await Customer.find();
+const getAllcustomers = async (search, page, limit) => {
+  let filter = search
+  ? {
+      $or: [
+        { customer_name: new RegExp(search, 'i') },
+        { display_name: new RegExp(search, 'i') },
+        { company_name: new RegExp(search, 'i') },
+        { "first_name.last_name": new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') },
+        { website: new RegExp(search, 'i') }
+      ],
+    }
+  : {};
+
+  const options = {
+    skip:(page -1) * limit,
+    limit:parseInt(limit)
+  }
+
+  const customers = await Customer.find(filter).skip(options.skip).limit(options.limit);
+  const totalRecords = await Customer.countDocuments(filter); 
+
+  return {
+    totalCustomers:totalRecords,
+    currentPage:parseInt(page),
+    totalPages:Math.ceil(totalRecords/ limit),
+    customers,
+  };
 };
 
 const getCustomerBycode = async (customer_code) => {

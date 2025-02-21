@@ -1,5 +1,5 @@
 const express = require("express");
-const CustomerController = require("../controllers/userControllers");
+const CustomerController = require("../controllers/customerControllers");
 const { validateRequest } = require("../config/validation");
 const {customerSchema  } = require("../validations/customerValidation");
 

@@ -15,6 +15,7 @@ const ProductSchema = new mongoose.Schema(
       },
     },
     productDesc: String,
+    isActive:Boolean,
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

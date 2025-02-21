@@ -1,4 +1,4 @@
-const { fetchAndStoreCustomers,getAllcustomers ,getCustomerBycode } = require("../services/userServices");
+const { fetchAndStoreCustomers,getAllcustomers ,getCustomerBycode } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
 
 const storeCustomers = async (req, res) => {
@@ -18,8 +18,10 @@ const storeCustomers = async (req, res) => {
 
 const getCustomers = async (req, res) => {
   try {
-    const result = await getAllcustomers();
-    successResponse(res, "Cutomers fetched successfully", result);
+    const {search, page = 1, limit = 10} = req.query;
+    const result = await getAllcustomers(search, page, limit);
+    const {customers,...otherFields} = result;
+    successResponse(res, "Cutomers fetched successfully",otherFields,customers);
   } catch (error) {
     errorResponse(res, "Error fetching Cutomers");
   }
