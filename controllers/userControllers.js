@@ -1,4 +1,5 @@
-const { fetchAndStoreCustomers } = require("../services/userServices");
+const { fetchAndStoreCustomers,getAllcustomers } = require("../services/userServices");
+const { successResponse, errorResponse } = require("../config/response");
 
 const storeCustomers = async (req, res) => {
   try {
@@ -15,4 +16,13 @@ const storeCustomers = async (req, res) => {
   }
 };
 
-module.exports = { storeCustomers };
+const getCustomers = async (req, res) => {
+  try {
+    const result = await getAllcustomers();
+    successResponse(res, "Cutomers fetched successfully", result);
+  } catch (error) {
+    errorResponse(res, "Error fetching Cutomers");
+  }
+};
+
+module.exports = { storeCustomers ,getCustomers};

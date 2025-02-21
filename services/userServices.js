@@ -79,4 +79,8 @@ const fetchAndStoreCustomers = async (accessToken) => {
   }
 };
 
-module.exports = { fetchAndStoreCustomers };
+const getAllcustomers = async () => {
+  return await Customer.find();
+};
+
+module.exports = { fetchAndStoreCustomers ,getAllcustomers };
