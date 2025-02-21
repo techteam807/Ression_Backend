@@ -18,7 +18,7 @@ const updateProduct = async (id, data) => {
 };
 
 const deleteProduct = async (id) => {
-  return await Product.findByIdAndDelete(id);
+  return await Product.findByIdAndUpdate(id,{isActive:false},{new:true});
 };
 
 const associateProductWithCustomer = async (customerId, productId) => {

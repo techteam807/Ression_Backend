@@ -3,7 +3,7 @@ const productService = require("../services/productService");
 const getProduct = async (req, res) => {
     try {
         const products = await productService.getAllProducts();
-        successResponse(res, "Products fetched successfully", products);
+        successResponse(res, "Products fetched successfully", null,products);
       } catch (error) {
         errorResponse(res, "Error fetching products");
       }
@@ -12,7 +12,7 @@ const AddProduct = async (req, res) => {
     try {
         const { productName, productCode, productDesc } = req.body;
         const newProduct = await productService.createProduct({ productName, productCode, productDesc });
-        successResponse(res, "Product created successfully", newProduct, 201);
+        successResponse(res, "Product created successfully", null,newProduct);
       } catch (error) {
         errorResponse(res, error.message.includes("E11000") ? "Product code must be unique" : error.message, 400);
       }
@@ -22,7 +22,7 @@ const EditProduct = async (req, res) => {
         const { id } = req.params;
         const updatedProduct = await productService.updateProduct(id, req.body);
         if (!updatedProduct) return errorResponse(res, "Product not found", 404);
-        successResponse(res, "Product updated successfully", updatedProduct);
+        successResponse(res, "Product updated successfully", null,updatedProduct);
       } catch (error) {
         errorResponse(res, "Error updating product");
       }
@@ -32,7 +32,7 @@ const DeleteProduct = async (req, res) => {
         const { id } = req.params;
         const deletedProduct = await productService.deleteProduct(id);
         if (!deletedProduct) return errorResponse(res, "Product not found", 404);
-        successResponse(res, "Product deleted successfully");
+        successResponse(res, "Product deleted successfully",null,deletedProduct);
       } catch (error) {
         errorResponse(res, "Error deleting product");
       }
@@ -46,7 +46,7 @@ const DeleteProduct = async (req, res) => {
       }
   
       const updatedCustomer = await productService.associateProductWithCustomer(customerId, productId);
-      successResponse(res, "Product associated with customer successfully", updatedCustomer);
+      successResponse(res, "Product associated with customer successfully", null,updatedCustomer);
     } catch (error) {
       errorResponse(res, error.message, 400);
     }
@@ -59,7 +59,7 @@ const DeleteProduct = async (req, res) => {
   
       if (!customerWithProducts) return errorResponse(res, "Customer not found", 404);
   
-      successResponse(res, "Customer products retrieved successfully", customerWithProducts);
+      successResponse(res, "Customer products retrieved successfully", null,customerWithProducts);
     } catch (error) {
       errorResponse(res, "Error fetching customer products");
     }
@@ -75,7 +75,7 @@ const DeleteProduct = async (req, res) => {
         return errorResponse(res, "product not found", 404);
       }
   
-      successResponse(res, "product fetched successfully", product);
+      successResponse(res, "product fetched successfully",null, product);
   
        
     } catch (error) {

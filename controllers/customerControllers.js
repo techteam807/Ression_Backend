@@ -20,8 +20,8 @@ const getCustomers = async (req, res) => {
   try {
     const {search, page = 1, limit = 10} = req.query;
     const result = await getAllcustomers(search, page, limit);
-    const {customers,...otherFields} = result;
-    successResponse(res, "Cutomers fetched successfully",otherFields,customers);
+    const {customers,...pagination } = result;
+    successResponse(res, "Cutomers fetched successfully",pagination,customers);
   } catch (error) {
     errorResponse(res, "Error fetching Cutomers");
   }
@@ -37,7 +37,7 @@ const getCustomerByCode = async (req ,res) => {
       return errorResponse(res, "Customer not found", 404);
     }
 
-    successResponse(res, "Customer fetched successfully", customer);
+    successResponse(res, "Customer fetched successfully", null,customer);
 
      
   } catch (error) {
