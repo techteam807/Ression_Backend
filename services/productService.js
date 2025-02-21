@@ -42,4 +42,8 @@ const associateProductWithCustomer = async (customerId, productId) => {
     return await Customer.findById(customerId).populate("products");
   };
 
-module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer,getCustomerWithProducts };
+  const getProductBycode = async (product_code) => {
+    return await Product.findOne({productCode:product_code});
+  }
+
+module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer,getCustomerWithProducts,getProductBycode };

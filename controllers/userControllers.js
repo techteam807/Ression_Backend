@@ -1,4 +1,4 @@
-const { fetchAndStoreCustomers,getAllcustomers } = require("../services/userServices");
+const { fetchAndStoreCustomers,getAllcustomers ,getCustomerBycode } = require("../services/userServices");
 const { successResponse, errorResponse } = require("../config/response");
 
 const storeCustomers = async (req, res) => {
@@ -25,4 +25,22 @@ const getCustomers = async (req, res) => {
   }
 };
 
-module.exports = { storeCustomers ,getCustomers};
+const getCustomerByCode = async (req ,res) => {
+  try {
+    const {customer_code} = req.query;
+
+    const customer = await getCustomerBycode(customer_code);
+
+    if(!customer) {
+      return errorResponse(res, "Customer not found", 404);
+    }
+
+    successResponse(res, "Customer fetched successfully", customer);
+
+     
+  } catch (error) {
+    errorResponse(res, "Error fetching customer by code");
+  }
+};
+
+module.exports = { storeCustomers ,getCustomers,getCustomerByCode};

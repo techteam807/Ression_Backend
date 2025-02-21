@@ -33,18 +33,16 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/db");
-const taskRoutes = require("./routes/taskRoutes");
-const userRoutes = require("./routes/userRoutes");
-const productRoutes = require('./routes/productRoute'); 
+const routes = require("./routes/route");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 connectDB();
-app.use("/tasks", taskRoutes);
-app.use("/data", userRoutes);
-app.use("/products", productRoutes); 
+
+//allow to use route
+app.use(routes);
 
 app.get("/", (req, res) => {
   res.send("Backend of TaskManager is running...");

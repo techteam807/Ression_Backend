@@ -83,4 +83,8 @@ const getAllcustomers = async () => {
   return await Customer.find();
 };
 
-module.exports = { fetchAndStoreCustomers ,getAllcustomers };
+const getCustomerBycode = async (customer_code) => {
+  return await Customer.findOne({contact_number:customer_code});
+}
+
+module.exports = { fetchAndStoreCustomers ,getAllcustomers,getCustomerBycode };

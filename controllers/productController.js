@@ -11,10 +11,6 @@ const getProduct = async (req, res) => {
 const AddProduct = async (req, res) => { 
     try {
         const { productName, productCode, productDesc } = req.body;
-        if (!productName || !productCode) {
-          return errorResponse(res, "Product name and code are required", 400);
-        }
-    
         const newProduct = await productService.createProduct({ productName, productCode, productDesc });
         successResponse(res, "Product created successfully", newProduct, 201);
       } catch (error) {
@@ -68,8 +64,26 @@ const DeleteProduct = async (req, res) => {
       errorResponse(res, "Error fetching customer products");
     }
   };
+
+  const getProductByCode = async (req ,res) => {
+    try {
+      const {product_code} = req.query;
+  
+      const product = await productService.getProductBycode(product_code);
+  
+      if(!product) {
+        return errorResponse(res, "product not found", 404);
+      }
+  
+      successResponse(res, "product fetched successfully", product);
+  
+       
+    } catch (error) {
+      errorResponse(res, "Error fetching product by code");
+    }
+  };
  
 
- module.exports = {AddProduct,DeleteProduct,EditProduct,getProduct,addProductToCustomer,getCustomerProducts};
+ module.exports = {AddProduct,DeleteProduct,EditProduct,getProduct,addProductToCustomer,getCustomerProducts,getProductByCode};
 
 
