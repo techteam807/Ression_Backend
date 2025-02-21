@@ -1,4 +1,8 @@
-const { fetchAndStoreCustomers,getAllcustomers ,getCustomerBycode } = require("../services/customerServices");
+const {
+  fetchAndStoreCustomers,
+  getAllcustomers,
+  getCustomerBycode,
+} = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
 
 const storeCustomers = async (req, res) => {
@@ -18,31 +22,34 @@ const storeCustomers = async (req, res) => {
 
 const getCustomers = async (req, res) => {
   try {
-    const {search, page = 1, limit = 10} = req.query;
+    const { search, page = 1, limit = 10 } = req.query;
     const result = await getAllcustomers(search, page, limit);
-    const {customers,...pagination } = result;
-    successResponse(res, "Cutomers fetched successfully",pagination,customers);
+    const { customers, ...pagination } = result;
+    successResponse(
+      res,
+      "Cutomers fetched successfully",
+      pagination,
+      customers
+    );
   } catch (error) {
     errorResponse(res, "Error fetching Cutomers");
   }
 };
 
-const getCustomerByCode = async (req ,res) => {
+const getCustomerByCode = async (req, res) => {
   try {
-    const {customer_code} = req.query;
+    const { customer_code } = req.query;
 
     const customer = await getCustomerBycode(customer_code);
 
-    if(!customer) {
+    if (!customer) {
       return errorResponse(res, "Customer not found", 404);
     }
 
-    successResponse(res, "Customer fetched successfully", null,customer);
-
-     
+    successResponse(res, "Customer fetched successfully", null, customer);
   } catch (error) {
     errorResponse(res, "Error fetching customer by code");
   }
 };
 
-module.exports = { storeCustomers ,getCustomers,getCustomerByCode};
+module.exports = { storeCustomers, getCustomers, getCustomerByCode };
