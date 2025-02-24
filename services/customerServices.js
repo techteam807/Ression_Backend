@@ -102,7 +102,7 @@ const getAllcustomers = async (search, page, limit) => {
   const totalRecords = await Customer.countDocuments(filter); 
 
   return {
-    totalCustomers:totalRecords,
+    totalData:totalRecords,
     currentPage:parseInt(page),
     totalPages:Math.ceil(totalRecords/ limit),
     customers,

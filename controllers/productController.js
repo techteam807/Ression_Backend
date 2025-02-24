@@ -3,7 +3,7 @@ const productService = require("../services/productService");
 
 const getProduct = async (req, res) => {
   try {
-    const { active } = req.query;
+    const { active, search, page = 1, limit = 10 } = req.query;
     let filter = {};
 
     if (active === "true") {
@@ -11,8 +11,9 @@ const getProduct = async (req, res) => {
     } else if (active === "false") {
       filter.isActive = false;
     }
-    const products = await productService.getAllProducts(filter);
-    successResponse(res, "Products fetched successfully", null, products);
+    const result = await productService.getAllProducts(filter, search, page, limit);
+    const {products, ...pagination} = result
+    successResponse(res, "Products fetched successfully", pagination, products);
   } catch (error) {
     errorResponse(res, "Error fetching products");
   }

@@ -5,8 +5,29 @@ const Customer = require("../models/customerModel");
 //   return await Product.find(filter);
 // };
 
-const getAllProducts = async (filter = {}) => {
-  return await Product.find(filter);
+const getAllProducts = async (filter = {}, search, page, limit) => {
+  if(search) {
+    filter.$or = [
+      { productName: new RegExp(search, 'i') },
+      { productCode:new RegExp(search, 'i')},
+      { resinType:new RegExp(search, 'i')}
+    ];
+  }
+
+  const options = {
+    skip:(page -1) * limit,
+    limit:parseInt(limit)
+  }
+
+  const products = await Product.find(filter).skip(options.skip).limit(options.limit);
+  const totalRecords = await Product.countDocuments(filter);
+
+  return {
+    totalData:totalRecords,
+    currentPage:parseInt(page),
+    totalPages:Math.ceil(totalRecords/ limit),
+    products,
+  };
 };
 
 const getProductById = async (id) => {
