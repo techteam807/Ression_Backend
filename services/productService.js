@@ -8,7 +8,7 @@ const Customer = require("../models/customerModel");
 const getAllProducts = async (filter = {}, search, page, limit) => {
   if(search) {
     filter.$or = [
-      { productName: new RegExp(search, 'i') },
+      // { productName: new RegExp(search, 'i') },
       { productCode:new RegExp(search, 'i')},
       { resinType:new RegExp(search, 'i')}
     ];

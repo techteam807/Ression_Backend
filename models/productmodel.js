@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const ProductSchema = new mongoose.Schema(
   {
-    productName: { type: String, required: true },
+    // productName: { type: String, required: true },
     productCode: {
       type: String,
       required: true,
@@ -14,7 +14,7 @@ const ProductSchema = new mongoose.Schema(
         message: "Product code must have 4 letters followed by 4 digits (e.g., ABCD1234)",
       },
     },
-    productDesc: String,
+    // productDesc: String,
     connectorType :String,
     distributorType :String,
     size:String,
