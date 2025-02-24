@@ -38,6 +38,7 @@
 
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const Product = require('../models/productModel');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; 
 
@@ -110,7 +111,38 @@ const getAllcustomers = async (search, page, limit) => {
 };
 
 const getCustomerBycode = async (customer_code) => {
-  return await Customer.findOne({contact_number:customer_code});
-}
+  return await Customer.findOne({contact_number:customer_code})
+    .populate({
+      path:"products",
+      select:"productCode resinType",
+  });
+};
 
-module.exports = { fetchAndStoreCustomers ,getAllcustomers,getCustomerBycode };
+const replaceCustomersProducts = async(customer_code) => {
+  const Customer = await getCustomerBycode(customer_code);
+
+  if(!Customer) {
+    return { error: "Customer not found", statusCode: 404};
+  }
+
+  if(!Customer.products || Customer.products.length === 0) {
+    return { error: "No products found for this customer", statusCode: 404 };
+  }
+
+  const ManageProducts = await Promise.all(
+    Customer.products.map(async (product) => {
+      return await Product.findByIdAndUpdate(
+        product._id,
+        {resinType:"exhausted"},
+        {new:true}
+      );
+    })
+  );
+
+  return {
+    ManageProducts
+  };
+};
+
+
+module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProducts };

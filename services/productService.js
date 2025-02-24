@@ -46,6 +46,10 @@ const deleteProduct = async (id) => {
   return await Product.findByIdAndUpdate(id,{isActive:false},{new:true});
 };
 
+const restoreProduct = async (id) => {
+  return await Product.findByIdAndUpdate(id,{isActive:true},{new:true});
+};
+
 const associateProductWithCustomer = async (customerId, productId) => {
     const customer = await Customer.findById(customerId);
     if (!customer) throw new Error("Customer not found");
@@ -71,4 +75,4 @@ const associateProductWithCustomer = async (customerId, productId) => {
     return await Product.findOne({productCode:product_code});
   }
 
-module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer,getCustomerWithProducts,getProductBycode };
+module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct };

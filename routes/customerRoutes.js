@@ -8,5 +8,7 @@ const router = express.Router();
 router.post("/store-customers", validateRequest(customerSchema), CustomerController.storeCustomers);
 router.get("/",CustomerController.getCustomers);
 router.get('/code',CustomerController.getCustomerByCode);
+router.post('/manageProducts',CustomerController.ReplaceProducts);
+
 
 module.exports = router;

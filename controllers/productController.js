@@ -63,6 +63,17 @@ const DeleteProduct = async (req, res) => {
   }
 };
 
+const RestoreProduct = async (req,res) => {
+  try {
+    const { id } = req.params;
+    const restoreProduct = await productService.restoreProduct(id);
+    if(!restoreProduct) return errorResponse(res, "Product not found", 404);
+    successResponse(res, "Product restored successfully", null, restoreProduct);
+  } catch (error) {
+    errorResponse(res, "Error restoreing product");
+  }
+}
+
 const addProductToCustomer = async (req, res) => {
   try {
     const { customerId, productId } = req.body;
@@ -126,6 +137,7 @@ module.exports = {
   AddProduct,
   DeleteProduct,
   EditProduct,
+  RestoreProduct,
   getProduct,
   addProductToCustomer,
   getCustomerProducts,

@@ -2,6 +2,7 @@ const {
   fetchAndStoreCustomers,
   getAllcustomers,
   getCustomerBycode,
+  replaceCustomersProducts
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
 
@@ -52,4 +53,21 @@ const getCustomerByCode = async (req, res) => {
   }
 };
 
-module.exports = { storeCustomers, getCustomers, getCustomerByCode };
+const ReplaceProducts = async (req, res) => {
+  try {
+
+    const {customer_code} = req.query;
+
+    const result = await replaceCustomersProducts(customer_code);
+
+    if (result.error) {
+      return errorResponse(res, result.error, result.statusCode);
+    }
+
+    successResponse(res, "Customer Products Managed successfully", null, result);
+  } catch (error) {
+    errorResponse(res, "Error Managing customer Products");
+  }
+};
+
+module.exports = { storeCustomers, getCustomers, getCustomerByCode, ReplaceProducts };
