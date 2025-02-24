@@ -144,5 +144,45 @@ const replaceCustomersProducts = async(customer_code) => {
   };
 };
 
+const replaceCustomersProducts1 = async (customer_code, newProductId) => {
+  const customer = await getCustomerBycode(customer_code);
 
-module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProducts };
+  if (!customer) {
+    return { error: "Customer not found", statusCode: 404 };
+  }
+
+  if (!customer.products || customer.products.length === 0) {
+    return { error: "No products found for this customer", statusCode: 404 };
+  }
+
+  const exhaustedProducts = customer.products.filter(
+    (product) => product.resinType === "exhausted"
+  );
+
+  const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
+
+  customer.products = customer.products.filter(
+    (product) => product.resinType !== "exhausted"
+  );
+
+  await customer.save();
+
+  const newProduct = await Product.findById(newProductId);
+  if (!newProduct) {
+    return { error: "New product not found", statusCode: 404 };
+  }
+
+  customer.products.push(newProductId);
+  await customer.save();
+
+  await Product.updateMany({ _id: { $in: exhaustedProductIds } }, { resinType: "exhausted" });
+
+  await Product.findByIdAndUpdate(newProductId, { resinType: "inuse" });
+
+  return {
+    customer
+  };
+};
+
+
+module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProducts, replaceCustomersProducts1 };
