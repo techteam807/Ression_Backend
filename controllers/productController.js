@@ -20,11 +20,15 @@ const getProduct = async (req, res) => {
 
 const AddProduct = async (req, res) => {
   try {
-    const { productName, productCode, productDesc } = req.body;
+    const { productName, productCode, productDesc, connectorType, distributorType, size, resinType  } = req.body;
     const newProduct = await productService.createProduct({
       productName,
       productCode,
       productDesc,
+      connectorType,
+      distributorType,
+      size,
+      resinType
     });
     successResponse(res, "Product created successfully", null, newProduct);
   } catch (error) {

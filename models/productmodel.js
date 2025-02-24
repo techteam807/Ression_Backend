@@ -15,8 +15,12 @@ const ProductSchema = new mongoose.Schema(
       },
     },
     productDesc: String,
+    connectorType :String,
+    distributorType :String,
+    size:String,
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
+    resinType: { type: String, enum: ["new", "exhausted", "inuse"], required: true },
   },
   { timestamps: true }
 );
