@@ -15,7 +15,7 @@ const getProduct = async (req, res) => {
     const {products, ...pagination} = result
     successResponse(res, "Products fetched successfully", pagination, products);
   } catch (error) {
-    errorResponse(res, "Error fetching products");
+    errorResponse(res, "Error fetching products",500,error);
   }
 };
 
@@ -48,7 +48,7 @@ const EditProduct = async (req, res) => {
     if (!updatedProduct) return errorResponse(res, "Product not found", 404);
     successResponse(res, "Product updated successfully", null, updatedProduct);
   } catch (error) {
-    errorResponse(res, "Error updating product");
+    errorResponse(res, "Error updating product",500,error);
   }
 };
 
@@ -59,7 +59,7 @@ const DeleteProduct = async (req, res) => {
     if (!deletedProduct) return errorResponse(res, "Product not found", 404);
     successResponse(res, "Product deleted successfully", null, deletedProduct);
   } catch (error) {
-    errorResponse(res, "Error deleting product");
+    errorResponse(res, "Error deleting product",500,error);
   }
 };
 
@@ -70,7 +70,7 @@ const RestoreProduct = async (req,res) => {
     if(!restoreProduct) return errorResponse(res, "Product not found", 404);
     successResponse(res, "Product restored successfully", null, restoreProduct);
   } catch (error) {
-    errorResponse(res, "Error restoreing product");
+    errorResponse(res, "Error restoreing product",500,error);
   }
 }
 
@@ -92,7 +92,7 @@ const addProductToCustomer = async (req, res) => {
       updatedCustomer
     );
   } catch (error) {
-    errorResponse(res, error.message, 400);
+    errorResponse(res, error.message,500,error);
   }
 };
 
@@ -113,7 +113,7 @@ const getCustomerProducts = async (req, res) => {
       customerWithProducts
     );
   } catch (error) {
-    errorResponse(res, "Error fetching customer products");
+    errorResponse(res, "Error fetching customer products",500,error);
   }
 };
 
@@ -129,7 +129,7 @@ const getProductByCode = async (req, res) => {
 
     successResponse(res, "product fetched successfully", null, product);
   } catch (error) {
-    errorResponse(res, "Error fetching product by code");
+    errorResponse(res, "Error fetching product by code",500,error);
   }
 };
 

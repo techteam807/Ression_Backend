@@ -118,7 +118,7 @@ const getCustomerBycode = async (customer_code) => {
   });
 };
 
-const replaceCustomersProducts = async(customer_code) => {
+const replaceCustomersProductsOld = async(customer_code) => {
   const Customer = await getCustomerBycode(customer_code);
 
   if(!Customer) {
@@ -127,6 +127,14 @@ const replaceCustomersProducts = async(customer_code) => {
 
   if(!Customer.products || Customer.products.length === 0) {
     return { error: "No products found for this customer", statusCode: 404 };
+  }
+  
+  const alreadyExhausted = customer.products.every(
+    (product) => product.resinType === "exhausted"
+  );
+
+  if (alreadyExhausted) {
+    return { message: "All products are already exhausted", statusCode: 200 };
   }
 
   const ManageProducts = await Promise.all(
@@ -144,7 +152,7 @@ const replaceCustomersProducts = async(customer_code) => {
   };
 };
 
-const replaceCustomersProducts1 = async (customer_code, newProductId) => {
+const replaceCustomersProductsNew = async (customer_code, newProductId) => {
   const customer = await getCustomerBycode(customer_code);
 
   if (!customer) {
@@ -172,6 +180,14 @@ const replaceCustomersProducts1 = async (customer_code, newProductId) => {
     return { error: "New product not found", statusCode: 404 };
   }
 
+  const productAlreadyExists = customer.products.some(
+    (product) => product._id.toString() === newProductId.toString()
+  );
+
+  if (productAlreadyExists) {
+    return { message: "Product already assigned to the customer", statusCode: 200 };
+  }
+
   customer.products.push(newProductId);
   await customer.save();
 
@@ -184,5 +200,4 @@ const replaceCustomersProducts1 = async (customer_code, newProductId) => {
   };
 };
 
-
-module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProducts, replaceCustomersProducts1 };
+module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProductsOld, replaceCustomersProductsNew};

@@ -3,7 +3,9 @@ const {
   getAllcustomers,
   getCustomerBycode,
   replaceCustomersProducts,
-  replaceCustomersProducts1
+  replaceCustomersProducts1,
+  replaceCustomersProductsOld,
+  replaceCustomersProductsNew
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
 
@@ -34,7 +36,7 @@ const getCustomers = async (req, res) => {
       customers
     );
   } catch (error) {
-    errorResponse(res, "Error fetching Cutomers");
+    errorResponse(res, "Error fetching Cutomers",500,error);
   }
 };
 
@@ -50,20 +52,16 @@ const getCustomerByCode = async (req, res) => {
 
     successResponse(res, "Customer fetched successfully", null, customer);
   } catch (error) {
-    errorResponse(res, "Error fetching customer by code");
+    errorResponse(res, "Error fetching customer by code" ,500,error);
   }
 };
 
-const ReplaceProducts = async (req, res) => {
+const ReplaceProductsOld = async (req, res) => {
   try {
 
     const {customer_code} = req.query;
 
-    if (!newProductId) {
-      return errorResponse(res, "New product ID is required", 400);
-    }
-
-    const result = await replaceCustomersProducts(customer_code);
+    const result = await replaceCustomersProductsOld(customer_code);
 
     if (result.error) {
       return errorResponse(res, result.error, result.statusCode);
@@ -71,11 +69,11 @@ const ReplaceProducts = async (req, res) => {
 
     successResponse(res, "Customer Products Managed successfully", null, result);
   } catch (error) {
-    errorResponse(res, "Error Managing customer Products");
-  }
+    errorResponse(res, "Error Managing customer Products", 500, error);
+}
 };
 
-const ReplaceProducts1 = async (req, res) => {
+const ReplaceProductsNew = async (req, res) => {
   try {
 
     const {customer_code} = req.query;
@@ -85,7 +83,7 @@ const ReplaceProducts1 = async (req, res) => {
       return errorResponse(res, "New product ID is required", 400);
     }
 
-    const result = await replaceCustomersProducts1(customer_code,newProductId);
+    const result = await replaceCustomersProductsNew(customer_code,newProductId);
 
     if (result.error) {
       return errorResponse(res, result.error, result.statusCode);
@@ -93,8 +91,9 @@ const ReplaceProducts1 = async (req, res) => {
 
     successResponse(res, "Customer Products Managed successfully", null, result);
   } catch (error) {
-    errorResponse(res, "Error Managing customer Products");
+    errorResponse(res, "Error Managing customer Products",500,error);
   }
 };
 
-module.exports = { storeCustomers, getCustomers, getCustomerByCode, ReplaceProducts };
+
+module.exports = { storeCustomers, getCustomers, getCustomerByCode, ReplaceProductsOld, ReplaceProductsNew };
