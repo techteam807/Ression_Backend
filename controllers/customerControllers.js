@@ -5,9 +5,26 @@ const {
   replaceCustomersProducts,
   replaceCustomersProducts1,
   replaceCustomersProductsOld,
-  replaceCustomersProductsNew
+  replaceCustomersProductsNew,
+  getAccessToken,
+  fetchAndStoreCustomers1
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
+
+const ZohoCustomers = async (req, res) => {
+  try {
+    const accessToken = await getAccessToken(); // Get access token dynamically
+
+    if (!accessToken) {
+      return res.status(500).json({ error: "Failed to get access token" });
+    }
+
+    const result = await fetchAndStoreCustomers1(accessToken);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 const storeCustomers = async (req, res) => {
   try {
@@ -96,4 +113,4 @@ const ReplaceProductsNew = async (req, res) => {
 };
 
 
-module.exports = { storeCustomers, getCustomers, getCustomerByCode, ReplaceProductsOld, ReplaceProductsNew };
+module.exports = { storeCustomers, getCustomers, getCustomerByCode, ReplaceProductsOld, ReplaceProductsNew ,ZohoCustomers };

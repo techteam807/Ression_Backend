@@ -4,7 +4,7 @@ const { validateRequest } = require("../config/validation");
 const {customerSchema  } = require("../validations/customerValidation");
 
 const router = express.Router();
-
+router.post("/zoho-customers",CustomerController.ZohoCustomers);
 router.post("/store-customers", validateRequest(customerSchema), CustomerController.storeCustomers);
 router.get("/",CustomerController.getCustomers);
 router.get('/code',CustomerController.getCustomerByCode);

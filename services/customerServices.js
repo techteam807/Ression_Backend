@@ -42,6 +42,63 @@ const Product = require('../models/productModel');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; 
 
+const getAccessToken = async () => {
+  try {
+    const response = await axios.post(
+      "https://accounts.zoho.in/oauth/v2/token",
+      new URLSearchParams({
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        refresh_token: process.env.REFRESH_TOKEN,
+        grant_type: "refresh_token",
+      }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    return response.data.access_token; // Return access token
+  } catch (error) {
+    console.error("Error getting access token:", error.response?.data || error.message);
+    return null;
+  }
+};
+
+const fetchAndStoreCustomers1 = async (accessToken) => {
+  try {
+    const response = await axios.get(ZOHO_API_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.data || !response.data.customers) {
+      throw new Error("Invalid response from Zoho API");
+    }
+
+    const zohoCustomers = response.data.customers;
+    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id);
+
+    const existingCustomers = await Customer.find(
+      { customer_id: { $in: zohoCustomerIds } },
+      { customer_id: 1, _id: 0 }
+    );
+
+    const existingCustomerIds = new Set(existingCustomers.map((c) => c.customer_id));
+
+    const newCustomers = zohoCustomers.filter(
+      (c) => !existingCustomerIds.has(c.customer_id)
+    );
+
+    if (newCustomers.length > 0) {
+      await Customer.insertMany(newCustomers);
+      return { message: "New customers added", count: newCustomers.length };
+    } else {
+      return { message: "No new customers to add", count: 0 };
+    }
+  } catch (error) {
+    console.error("Error in fetchAndStoreCustomers:", error.message);
+    throw error;
+  }
+};
+
+
 const fetchAndStoreCustomers = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
@@ -200,4 +257,4 @@ const replaceCustomersProductsNew = async (customer_code, newProductId) => {
   };
 };
 
-module.exports = { fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProductsOld, replaceCustomersProductsNew};
+module.exports = { getAccessToken, fetchAndStoreCustomers1, fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProductsOld, replaceCustomersProductsNew};
