@@ -35,7 +35,8 @@
 // };
 
 // module.exports = { fetchAndStoreCustomers };
-
+// import { ProductEnum } from '../config/global';
+const { ProductEnum } = require('../config/global.js');
 const axios = require("axios");
 const Customer = require("../models/customerModel");
 const Product = require('../models/productModel');
@@ -186,8 +187,8 @@ const replaceCustomersProductsOld = async(customer_code) => {
     return { error: "No products found for this customer", statusCode: 404 };
   }
   
-  const alreadyExhausted = customer.products.every(
-    (product) => product.resinType === "exhausted"
+  const alreadyExhausted = Customer.products.every(
+    (product) => product.resinType === ProductEnum.EXHAUSTED
   );
 
   if (alreadyExhausted) {
@@ -198,7 +199,7 @@ const replaceCustomersProductsOld = async(customer_code) => {
     Customer.products.map(async (product) => {
       return await Product.findByIdAndUpdate(
         product._id,
-        {resinType:"exhausted"},
+        {resinType:ProductEnum.EXHAUSTED},
         {new:true}
       );
     })
@@ -221,13 +222,13 @@ const replaceCustomersProductsNew = async (customer_code, newProductId) => {
   }
 
   const exhaustedProducts = customer.products.filter(
-    (product) => product.resinType === "exhausted"
+    (product) => product.resinType === ProductEnum.EXHAUSTED
   );
 
   const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
 
   customer.products = customer.products.filter(
-    (product) => product.resinType !== "exhausted"
+    (product) => product.resinType !== ProductEnum.EXHAUSTED
   );
 
   await customer.save();
@@ -248,9 +249,9 @@ const replaceCustomersProductsNew = async (customer_code, newProductId) => {
   customer.products.push(newProductId);
   await customer.save();
 
-  await Product.updateMany({ _id: { $in: exhaustedProductIds } }, { resinType: "exhausted" });
+  await Product.updateMany({ _id: { $in: exhaustedProductIds } }, { resinType: ProductEnum.EXHAUSTED });
 
-  await Product.findByIdAndUpdate(newProductId, { resinType: "inuse" });
+  await Product.findByIdAndUpdate(newProductId, { resinType: ProductEnum.IN_USE });
 
   return {
     customer
