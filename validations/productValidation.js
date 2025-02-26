@@ -26,6 +26,7 @@ const updateProduct = Joi.object({
     //     "string.empty": "Product name is required",
     //   }), 
     // productDesc: Joi.string().allow(""),
+    id: Joi.number().integer().required(),
     connectorType:Joi.string().allow(""),
     distributorType:Joi.string().allow(""),
     size:Joi.string().allow(""),
@@ -35,4 +36,16 @@ const updateProduct = Joi.object({
   }),
 });
 
-module.exports = { createProduct, updateProduct };
+const deleteProduct = Joi.object({
+  id: Joi.number().integer().required(),
+})
+
+const restoreProduct = Joi.object({
+  id: Joi.number().integer().required(),
+})
+
+const getProductByCode = Joi.object({
+  product_code: Joi.string().required(),
+})
+
+module.exports = { createProduct, updateProduct, deleteProduct, restoreProduct, getProductByCode };
