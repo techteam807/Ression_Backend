@@ -26,7 +26,7 @@ const updateProduct = Joi.object({
     //     "string.empty": "Product name is required",
     //   }), 
     // productDesc: Joi.string().allow(""),
-    id: Joi.number().integer().required(),
+    // id: Joi.number().integer().required(),
     connectorType:Joi.string().allow(""),
     distributorType:Joi.string().allow(""),
     size:Joi.string().allow(""),
