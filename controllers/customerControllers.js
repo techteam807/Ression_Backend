@@ -96,9 +96,9 @@ const ReplaceProductsNew = async (req, res) => {
     const {customer_code} = req.query;
     const { newProductId } = req.body;
 
-    if (!newProductId) {
-      return errorResponse(res, "New product ID is required", 400);
-    }
+    // if (!newProductId) {
+    //   return errorResponse(res, "New product ID is required", 400);
+    // }
 
     const result = await replaceCustomersProductsNew(customer_code,newProductId);
 
