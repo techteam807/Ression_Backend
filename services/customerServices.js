@@ -39,7 +39,7 @@
 const { ProductEnum } = require('../config/global.js');
 const axios = require("axios");
 const Customer = require("../models/customerModel");
-const Product = require('../models/productModel');
+const Product = require("../models/productModel");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; 
 
