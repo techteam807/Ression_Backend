@@ -3,7 +3,13 @@ const ProductEnum = {
     EXHAUSTED: "exhausted",
     IN_USE: "inuse",
   };
+
+const UserEnum = {
+  APPROVE:"approve",
+  PENDING:"pending",
+  DELETE:"delete",
+}  
   
-  module.exports = { ProductEnum };
+  module.exports = { ProductEnum,UserEnum };
   
   

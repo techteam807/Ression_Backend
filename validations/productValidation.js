@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const {ProductEnum} = require('../config/global');
 
 const createProduct = Joi.object({
   // productName: Joi.string().required().messages({
@@ -15,7 +16,7 @@ const createProduct = Joi.object({
   connectorType:Joi.string().allow(""),
   distributorType:Joi.string().allow(""),
   size:Joi.string().allow(""),
-  resinType:Joi.string().valid("new", "exhausted", "inuse").required().messages({
+  resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
     "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
     "string.empty": "Resin type is required",
   }),
@@ -30,7 +31,7 @@ const updateProduct = Joi.object({
     connectorType:Joi.string().allow(""),
     distributorType:Joi.string().allow(""),
     size:Joi.string().allow(""),
-    resinType:Joi.string().valid("new", "exhausted", "inuse").required().messages({
+    resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
     "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
     "string.empty": "Resin type is required",
   }),
