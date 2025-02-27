@@ -23,16 +23,65 @@ const signInUser = async (mobile_number) => {
     return user;
 };
 
-const approveUser = async () => {
-    return await User.findByIdAndUpdate(user_id, { user_status: "approve" }, { new: true });
+const approveUser = async (mobile_number) => {
+    const user = await User.findOne({ mobile_number });
+
+    if (!user) throw new Error("User not found");
+
+    if (user.user_status === "approve") {
+        throw new Error("User is already approved.");
+    }
+
+    if (user.user_status !== "pending") {
+        throw new Error("Only pending users can be approved.");
+    }
+
+    return await User.findOneAndUpdate(
+        { mobile_number },
+        { user_status: "approve" },
+        { new: true } 
+    );
 };
 
-const deleteUser = async () => {
-    return await User.findByIdAndUpdate(user_id, { user_status: "delete" }, { new: true });
+const deleteUser = async (mobile_number) => {
+    const user = await User.findOne({ mobile_number });
+
+    if (!user) throw new Error("User not found");
+
+    if (user.user_status === "delete") {
+        throw new Error("User is already deleted.");
+    }
+
+    if (user.user_status !== "approve" || user.user_status !== "pending" ) {
+        throw new Error("Only approve users can be deleted.");
+    }
+
+    return await User.findOneAndUpdate(
+        { mobile_number },
+        { user_status: "delete" },
+        { new: true } 
+    );
 };
 
-const restoreUser = async () => {
-    return await User.findByIdAndUpdate(user_id, { user_status: "pending" }, { new: true });
+const restoreUser = async (mobile_number) => {
+    const user = await User.findOne({ mobile_number });
+
+    if (!user) throw new Error("User not found");
+
+    if (user.user_status === "pending") {
+        throw new Error("User is already pending.");
+    }
+
+    if (user.user_status !== "delete") {
+        throw new Error("Only deleted users can be restored.");
+    }
+
+    return await User.findOneAndUpdate(
+        { mobile_number },
+        { user_status: "pending" },
+        { new: true } 
+    );
 };
+
 
 module.exports = { getUsers, signUpUser, signInUser, approveUser, deleteUser, restoreUser }

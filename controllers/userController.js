@@ -15,9 +15,9 @@ const getUsers = async (req,res) => {
 
 const signUpUser = async (req,res) => {
     try {
-        const {userName,city,mobileNumber} = req.body;
+        const {user_name,city,mobile_number} = req.body;
 
-        const Users = await UserService.signUpUser(userName,city,mobileNumber);
+        const Users = await UserService.signUpUser({user_name,city,mobile_number});
        
       successResponse(res, "User Sign Up successfully", null, Users);
     } catch (error) {
@@ -27,9 +27,9 @@ const signUpUser = async (req,res) => {
 
 const signInUser = async (req,res) => {
     try {
-        const {mobileNumber} = req.body;
+        const {mobile_number} = req.body;
 
-        const Users = await UserService.signInUser(mobileNumber);
+        const Users = await UserService.signInUser(mobile_number);
        
       successResponse(res, "User Sign In successfully", null, Users);
     } catch (error) {
@@ -39,9 +39,9 @@ const signInUser = async (req,res) => {
 
 const approveUser = async (req,res) => {
     try {
-        const {userId} = req.body;
+        const {mobile_number} = req.body;
 
-        const Users = await UserService.approveUser(userId);
+        const Users = await UserService.approveUser(mobile_number);
       successResponse(res, "User Approved successfully", null, Users);
     } catch (error) {
       errorResponse(res, "Error Approved User",500,error);
@@ -50,9 +50,9 @@ const approveUser = async (req,res) => {
 
 const deleteUser = async (req,res) => {
     try {
-        const {userId} = req.body;
+        const {mobile_number} = req.body;
 
-        const Users = await UserService.deleteUser(userId);
+        const Users = await UserService.deleteUser(mobile_number);
        
       successResponse(res, "User Deleted successfully", null, Users);
     } catch (error) {
@@ -62,9 +62,9 @@ const deleteUser = async (req,res) => {
 
 const restoreUser = async (req,res) => {
     try {
-        const {userId} = req.body;
+        const {mobile_number} = req.body;
 
-        const Users = await UserService.restoreUser(userId);
+        const Users = await UserService.restoreUser(mobile_number);
       successResponse(res, "User Restored successfully", null, Users);
     } catch (error) {
       errorResponse(res, "Error Restored User",500,error);

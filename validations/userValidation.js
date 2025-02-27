@@ -16,13 +16,13 @@ const signInUser = Joi.object({
 });
 
 const approveUser = Joi.object({
-  user_id: Joi.string().required(),
+  mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
 });
 const deleteUser = Joi.object({
-  user_id: Joi.string().required(),
+  mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
 });
 const restoreUser = Joi.object({
-  user_id: Joi.string().required(),
+  mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
 });
 
 module.exports =  { getUser, signUpUser, signInUser, approveUser, deleteUser, restoreUser };
