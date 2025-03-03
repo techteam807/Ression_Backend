@@ -3,11 +3,13 @@ const UserService = require('../services/userServices');
 
 const getUsers = async (req,res) => {
     try {
-        const {user_status} = req.query;
+        const {user_status, search, page = 1, limit = 10 } = req.query;
 
-        const Users = await UserService.getUsers(user_status);
+        const result = await UserService.getUsers(user_status, search, page, limit);
+
+        const { Users, ...pagination } = result;
        
-        successResponse(res, `${user_status} User get successfully`, null, Users);
+        successResponse(res, `${user_status} User get successfully`, pagination, Users);
       } catch (error) {
         errorResponse(res, `Error get ${user_status} User`,500,error);
       }

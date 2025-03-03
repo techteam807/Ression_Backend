@@ -1,8 +1,42 @@
 const User = require('../models/userModel');
 
-const getUsers = async (user_status) => {
+const getUsers1 = async (user_status) => {
     const status = user_status ? { user_status } : {};
     return await User.find(status);
+};
+
+const getUsers = async (user_status, search, page, limit) => {
+
+    let filter = search
+    ? {
+        $or: [
+          { user_name: new RegExp(search, "i") },
+          { mobile_number: new RegExp(search, "i") },
+        ],
+      }
+    : {};
+
+    if (user_status) {
+        filter.user_status = user_status;
+    }
+
+    const options = {
+        skip: (page - 1) * limit,
+        limit: parseInt(limit),
+    };
+
+     const Users = await User.find(filter)
+        .skip(options.skip)
+        .limit(options.limit);
+
+      const totalRecords = await User.countDocuments(filter);
+
+      return {
+        totalData: totalRecords,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalRecords / limit),
+        Users,
+      };
 };
 
 const signUpUser = async (userData) => {
