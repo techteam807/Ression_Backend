@@ -17,9 +17,9 @@ const getUsers = async (req,res) => {
 
 const signUpUser = async (req,res) => {
     try {
-        const {user_name,city,mobile_number} = req.body;
+        const {user_name,mobile_number} = req.body;
 
-        const Users = await UserService.signUpUser({user_name,city,mobile_number});
+        const Users = await UserService.signUpUser({user_name,mobile_number});
        
       successResponse(res, "User Sign Up successfully", null, Users);
     } catch (error) {

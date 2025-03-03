@@ -8,7 +8,7 @@ const getUser = Joi.object({
 
 const signUpUser = Joi.object({
   user_name: Joi.string().min(3).max(50).required(),
-  city: Joi.string().required(),
+  // city: Joi.string().required(),
   mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
 });
 
