@@ -122,9 +122,9 @@ const ManageCustomerAndProducts = async(req, res) => {
     const result = await manageCustomerAndProduct(customer_code,product_code);
 
     if (result.error) {
-      return errorResponse(res, result.error, result.statusCode);
+      return errorResponse(res, null, result.statusCode, result.error);
     }
-
+    
     successResponse(res, "Customer Products Managed successfully", null, result);
 
   } catch (error) {

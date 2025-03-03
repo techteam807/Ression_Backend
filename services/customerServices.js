@@ -282,7 +282,7 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
 
   if (!Customer) {
     return {
-      error: `Customer not found with ${customer_code}`,
+      error:  new Error(`Customer not found with ${customer_code}`),
       statusCode: 404,
     };
   }
@@ -306,7 +306,7 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
 
     if (!Products) {
       return {
-        error: `Product not found with ${product_code}`,
+        error:  new Error(`Product not found with ${product_code}`),
         statusCode: 404,
       };
     }
@@ -314,7 +314,7 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
     if(!Products.isActive)
     {
       return {
-        error: `Product not Active ${product_code}`,
+        error:  new Error(`Product not Active ${product_code}`),
         statusCode: 404,
       };
     }

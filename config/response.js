@@ -15,8 +15,17 @@ const successResponse = (res, message, pagination = null, data = {}) => {
 };
 
 
-const errorResponse = (res, message, statusCode = 500, error = null) => {
-  return res.status(statusCode).json({ status: false, message ,error:error ? error.message : null});
+// const errorResponse = (res, message = null, statusCode = 500, error = null) => {
+//   return res.status(statusCode).json({ status: false, message ,error:error ? error.message : null});
+// };
+
+const errorResponse = (res, message = null, statusCode = 500, error = null) => {
+  const response = { status: false };
+  
+  if (message) response.message = message;
+  if (error) response.error = error.message;
+
+  return res.status(statusCode).json(response);
 };
 
 module.exports = { successResponse, errorResponse };
