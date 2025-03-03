@@ -310,6 +310,14 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
         statusCode: 404,
       };
     }
+    
+    if(!Products.isActive)
+    {
+      return {
+        error: `Product not Active ${product_code}`,
+        statusCode: 404,
+      };
+    }
 
     Customer.products.push(Products._id);
 
