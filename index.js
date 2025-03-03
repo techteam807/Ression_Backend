@@ -45,7 +45,7 @@ connectDB();
 app.use(routes);
 
 app.get("/", (req, res) => {
-  res.send("Backend of TaskManager is running...");
+  res.send("Backend of Resin is running...");
 });
 
 const PORT = process.env.PORT || 5000;
