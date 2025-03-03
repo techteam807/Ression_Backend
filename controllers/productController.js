@@ -21,13 +21,14 @@ const getProduct = async (req, res) => {
 
 const AddProduct = async (req, res) => {
   try {
-    const { productCode, connectorType, distributorType, size, resinType  } = req.body;
+    const { productCode, connectorType, distributorType, size, resinType, productStatus } = req.body;
     const newProduct = await productService.createProduct({
       productCode,
       connectorType,
       distributorType,
       size,
-      resinType
+      resinType,
+      productStatus
     });
     successResponse(res, "Product created successfully", null, newProduct);
   } catch (error) {

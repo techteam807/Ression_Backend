@@ -21,7 +21,8 @@ const ProductSchema = new mongoose.Schema(
     size:String,
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
-    resinType: { type: String, enum: [ProductEnum.NEW, ProductEnum.EXHAUSTED, ProductEnum.IN_USE], required: true },
+    resinType:{type: String, enum: [ProductEnum.NEW, ProductEnum.EXHAUSTED, ProductEnum.IN_USE], required: true },
+    productStatus: { type: String, enum: [ProductEnum.NEW, ProductEnum.EXHAUSTED, ProductEnum.IN_USE], required: true },
   },
   { timestamps: true }
 );

@@ -20,6 +20,10 @@ const createProduct = Joi.object({
     "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
     "string.empty": "Resin type is required",
   }),
+  productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+    "string.empty": "Resin type is required",
+  }),
 });
 
 const updateProduct = Joi.object({
@@ -32,6 +36,10 @@ const updateProduct = Joi.object({
     distributorType:Joi.string().allow(""),
     size:Joi.string().allow(""),
     resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+    "string.empty": "Resin type is required",
+  }),
+  productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
     "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
     "string.empty": "Resin type is required",
   }),

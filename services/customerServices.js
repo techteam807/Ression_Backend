@@ -36,12 +36,14 @@
 
 // module.exports = { fetchAndStoreCustomers };
 // import { ProductEnum } from '../config/global';
-const { ProductEnum } = require('../config/global.js');
+const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
 
-const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; 
+const ProductService = require("../services/productService");
+
+const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
 const getAccessToken = async () => {
   try {
@@ -58,7 +60,10 @@ const getAccessToken = async () => {
 
     return response.data.access_token; // Return access token
   } catch (error) {
-    console.error("Error getting access token:", error.response?.data || error.message);
+    console.error(
+      "Error getting access token:",
+      error.response?.data || error.message
+    );
     return null;
   }
 };
@@ -81,7 +86,9 @@ const fetchAndStoreCustomers1 = async (accessToken) => {
       { customer_id: 1, _id: 0 }
     );
 
-    const existingCustomerIds = new Set(existingCustomers.map((c) => c.customer_id));
+    const existingCustomerIds = new Set(
+      existingCustomers.map((c) => c.customer_id)
+    );
 
     const newCustomers = zohoCustomers.filter(
       (c) => !existingCustomerIds.has(c.customer_id)
@@ -99,7 +106,6 @@ const fetchAndStoreCustomers1 = async (accessToken) => {
   }
 };
 
-
 const fetchAndStoreCustomers = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
@@ -111,14 +117,16 @@ const fetchAndStoreCustomers = async (accessToken) => {
     }
 
     const zohoCustomers = response.data.customers;
-    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id); 
+    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id);
 
     const existingCustomers = await Customer.find(
-      { customer_id: { $in: zohoCustomerIds } }, 
-      { customer_id: 1, _id: 0 } 
+      { customer_id: { $in: zohoCustomerIds } },
+      { customer_id: 1, _id: 0 }
     );
 
-    const existingCustomerIds = new Set(existingCustomers.map((c) => c.customer_id)); 
+    const existingCustomerIds = new Set(
+      existingCustomers.map((c) => c.customer_id)
+    );
 
     // Filter only new customers (not in our DB)
     const newCustomers = zohoCustomers.filter(
@@ -140,122 +148,191 @@ const fetchAndStoreCustomers = async (accessToken) => {
 
 const getAllcustomers = async (search, page, limit) => {
   let filter = search
-  ? {
-      $or: [
-        { customer_name: new RegExp(search, 'i') },
-        { display_name: new RegExp(search, 'i') },
-        { company_name: new RegExp(search, 'i') },
-        { "first_name.last_name": new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') },
-        { website: new RegExp(search, 'i') }
-      ],
-    }
-  : {};
+    ? {
+        $or: [
+          { customer_name: new RegExp(search, "i") },
+          { display_name: new RegExp(search, "i") },
+          { company_name: new RegExp(search, "i") },
+          { first_name: new RegExp(search, "i") },
+          { last_name: new RegExp(search, "i") },
+          { email: new RegExp(search, "i") },
+          { website: new RegExp(search, "i") },
+          {contact_number:new RegExp(search, "i")},
+        ],
+      }
+    : {};
 
   const options = {
-    skip:(page -1) * limit,
-    limit:parseInt(limit)
-  }
+    skip: (page - 1) * limit,
+    limit: parseInt(limit),
+  };
 
-  const customers = await Customer.find(filter).skip(options.skip).limit(options.limit);
-  const totalRecords = await Customer.countDocuments(filter); 
+  const customers = await Customer.find(filter)
+    .skip(options.skip)
+    .limit(options.limit);
+  const totalRecords = await Customer.countDocuments(filter);
 
   return {
-    totalData:totalRecords,
-    currentPage:parseInt(page),
-    totalPages:Math.ceil(totalRecords/ limit),
+    totalData: totalRecords,
+    currentPage: parseInt(page),
+    totalPages: Math.ceil(totalRecords / limit),
     customers,
   };
 };
 
 const getCustomerBycode = async (customer_code) => {
-  return await Customer.findOne({contact_number:customer_code})
-    .populate({
-      path:"products",
-      select:"productCode resinType",
+  return await Customer.findOne({ contact_number: customer_code }).populate({
+    path: "products",
+    select: "productCode resinType productStatus",
   });
 };
 
-const replaceCustomersProductsOld = async(customer_code) => {
+// const replaceCustomersProductsOld = async (customer_code) => {
+//   const Customer = await getCustomerBycode(customer_code);
+
+//   if (!Customer) {
+//     return { error: "Customer not found", statusCode: 404 };
+//   }
+
+//   if (!Customer.products || Customer.products.length === 0) {
+//     return { error: "No products found for this customer", statusCode: 404 };
+//   }
+
+//   const alreadyExhausted = Customer.products.every(
+//     (product) => product.resinType === ProductEnum.EXHAUSTED
+//   );
+
+//   if (alreadyExhausted) {
+//     return { message: "All products are already exhausted", statusCode: 200 };
+//   }
+
+//   const ManageProducts = await Promise.all(
+//     Customer.products.map(async (product) => {
+//       return await Product.findByIdAndUpdate(
+//         product._id,
+//         { resinType: ProductEnum.EXHAUSTED },
+//         { new: true }
+//       );
+//     })
+//   );
+
+//   return {
+//     ManageProducts,
+//   };
+// };
+
+// const replaceCustomersProductsNew = async (customer_code, newProductId) => {
+//   const customer = await getCustomerBycode(customer_code);
+
+//   if (!customer) {
+//     return { error: "Customer not found", statusCode: 404 };
+//   }
+
+//   if (!customer.products || customer.products.length === 0) {
+//     return { error: "No products found for this customer", statusCode: 404 };
+//   }
+
+//   const exhaustedProducts = customer.products.filter(
+//     (product) => product.resinType === ProductEnum.EXHAUSTED
+//   );
+
+//   const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
+
+//   customer.products = customer.products.filter(
+//     (product) => product.resinType !== ProductEnum.EXHAUSTED
+//   );
+
+//   await customer.save();
+
+//   const newProduct = await Product.findById(newProductId);
+//   if (!newProduct) {
+//     return { error: "New product not found", statusCode: 404 };
+//   }
+
+//   const productAlreadyExists = customer.products.some(
+//     (product) => product._id.toString() === newProductId.toString()
+//   );
+
+//   if (productAlreadyExists) {
+//     return {
+//       message: "Product already assigned to the customer",
+//       statusCode: 200,
+//     };
+//   }
+
+//   customer.products.push(newProductId);
+//   await customer.save();
+
+//   await Product.updateMany(
+//     { _id: { $in: exhaustedProductIds } },
+//     { resinType: ProductEnum.EXHAUSTED }
+//   );
+
+//   await Product.findByIdAndUpdate(newProductId, {
+//     resinType: ProductEnum.IN_USE,
+//   });
+
+//   return {
+//     customer,
+//   };
+// };
+
+const manageCustomerAndProduct = async (customer_code, product_code) => {
   const Customer = await getCustomerBycode(customer_code);
 
-  if(!Customer) {
-    return { error: "Customer not found", statusCode: 404};
+  if (!Customer) {
+    return {
+      error: `Customer not found with ${customer_code}`,
+      statusCode: 404,
+    };
   }
 
-  if(!Customer.products || Customer.products.length === 0) {
-    return { error: "No products found for this customer", statusCode: 404 };
-  }
-  
-  const alreadyExhausted = Customer.products.every(
-    (product) => product.resinType === ProductEnum.EXHAUSTED
-  );
+  Customer.products = Customer.products || [];
 
-  if (alreadyExhausted) {
-    return { message: "All products are already exhausted", statusCode: 200 };
+  const CustomerproductIds = Customer.products.map((product) => product._id);
+
+  if (CustomerproductIds.length > 0) {
+    await Product.updateMany(
+      { _id: { $in: CustomerproductIds } },
+      { productStatus: ProductEnum.EXHAUSTED }
+    );
+    Customer.products = [];
+    await Customer.save();
   }
 
-  const ManageProducts = await Promise.all(
-    Customer.products.map(async (product) => {
-      return await Product.findByIdAndUpdate(
-        product._id,
-        {resinType:ProductEnum.EXHAUSTED},
-        {new:true}
-      );
-    })
-  );
+  if (product_code) {
+    const Products = await ProductService.getProductBycode(product_code);
+    console.log(Products);
+
+    if (!Products) {
+      return {
+        error: `Product not found with ${product_code}`,
+        statusCode: 404,
+      };
+    }
+
+    Customer.products.push(Products._id);
+
+    await Customer.save();
+
+    await Product.findOneAndUpdate(
+      { productCode: product_code },
+      { productStatus: ProductEnum.IN_USE }
+    );
+  }
 
   return {
-    ManageProducts
+    Customer,
   };
 };
 
-const replaceCustomersProductsNew = async (customer_code, newProductId) => {
-  const customer = await getCustomerBycode(customer_code);
-
-  if (!customer) {
-    return { error: "Customer not found", statusCode: 404 };
-  }
-
-  if (!customer.products || customer.products.length === 0) {
-    return { error: "No products found for this customer", statusCode: 404 };
-  }
-
-  const exhaustedProducts = customer.products.filter(
-    (product) => product.resinType === ProductEnum.EXHAUSTED
-  );
-
-  const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
-
-  customer.products = customer.products.filter(
-    (product) => product.resinType !== ProductEnum.EXHAUSTED
-  );
-
-  await customer.save();
-
-  const newProduct = await Product.findById(newProductId);
-  if (!newProduct) {
-    return { error: "New product not found", statusCode: 404 };
-  }
-
-  const productAlreadyExists = customer.products.some(
-    (product) => product._id.toString() === newProductId.toString()
-  );
-
-  if (productAlreadyExists) {
-    return { message: "Product already assigned to the customer", statusCode: 200 };
-  }
-
-  customer.products.push(newProductId);
-  await customer.save();
-
-  await Product.updateMany({ _id: { $in: exhaustedProductIds } }, { resinType: ProductEnum.EXHAUSTED });
-
-  await Product.findByIdAndUpdate(newProductId, { resinType: ProductEnum.IN_USE });
-
-  return {
-    customer
-  };
+module.exports = {
+  getAccessToken,
+  fetchAndStoreCustomers1,
+  fetchAndStoreCustomers,
+  getAllcustomers,
+  getCustomerBycode,
+  // replaceCustomersProductsOld,
+  // replaceCustomersProductsNew,
+  manageCustomerAndProduct,
 };
-
-module.exports = { getAccessToken, fetchAndStoreCustomers1, fetchAndStoreCustomers, getAllcustomers, getCustomerBycode, replaceCustomersProductsOld, replaceCustomersProductsNew};
