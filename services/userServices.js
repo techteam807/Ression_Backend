@@ -86,7 +86,7 @@ const deleteUser = async (mobile_number) => {
         throw new Error("User is already deleted.");
     }
 
-    if (user.user_status !== "approve" || user.user_status !== "pending" ) {
+    if (user.user_status !== "approve") {
         throw new Error("Only approve users can be deleted.");
     }
 
