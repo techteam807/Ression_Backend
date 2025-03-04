@@ -4,6 +4,7 @@ const {UserEnum} = require('../config/global');
 const getUser = Joi.object({
   user_status: Joi.string().valid(UserEnum.APPROVE,UserEnum.DELETE,UserEnum.PENDING).optional(),
   search:Joi.string().optional(),
+  page:Joi.string.optional(),
 });
 
 const signUpUser = Joi.object({
