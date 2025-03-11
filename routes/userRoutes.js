@@ -14,5 +14,6 @@ router.post('/verifySignIn',UserController.verifyUserLogin);
 router.put('/approveUser',validateRequest(approveUser),UserController.approveUser);
 router.put('/deleteUser',validateRequest(deleteUser),UserController.deleteUser);
 router.put('/restoreUser',validateRequest(restoreUser),UserController.restoreUser);
+router.get('/getlogs',UserController.logsOfUser)
 
 module.exports = router;

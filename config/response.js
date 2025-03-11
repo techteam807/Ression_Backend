@@ -2,14 +2,16 @@
 //   return res.status(200).json({ status: true, message, pagination, data });
 // };
 
-const successResponse = (res, message, pagination = null, data = {}) => {
+const successResponse = (res, message, pagination = null, data = null) => {
   const response = { status: true, message };
 
   if (pagination) {
     response.pagination = pagination;
   }
 
-  response.data = data;
+  if(data) {
+    response.data = data 
+  }
 
   return res.status(200).json(response);
 };

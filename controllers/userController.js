@@ -20,8 +20,14 @@ const signUpUser = async (req,res) => {
         const {user_name,mobile_number} = req.body;
 
         const Users = await UserService.signUpUser({user_name,mobile_number},res);
+
+        if (Users.success) {
+          return successResponse(res, Users.message, null, null);
+        } else {
+          return errorResponse(res, Users.message, Users.statusCode);
+        }
        
-      successResponse(res, "User Sign Up successfully", null, Users);
+      // successResponse(res, "User Sign Up successfully", null, null);
     } catch (error) {
       errorResponse(res, "Error Sign Up User",500,error);
     }
@@ -32,8 +38,14 @@ const signInUser = async (req,res) => {
         const {mobile_number} = req.body;
 
         const Users = await UserService.signInUser(mobile_number,res);
+
+        if (Users.success) {
+          return successResponse(res, Users.message, null, null);
+        } else {
+          return errorResponse(res, Users.message, Users.statusCode);
+        }
        
-      successResponse(res, "User Sign In successfully", null, Users);
+      // successResponse(res, "User Sign In successfully", null, null);
     } catch (error) {
       errorResponse(res, "Error Sign In User",500,error);
     }
@@ -47,7 +59,7 @@ const verifyUserRegister = async (req,res) => {
 
     // const Users = await UserService.signInUser(mobile_number);
    
-  successResponse(res, "User Sign Up and verified successfully", null, user);
+  successResponse(res, "User Sign Up and verified successfully", null, null);
 } catch (error) {
   errorResponse(res, "Error Sign Up & verified User",500,error);
 }
@@ -101,16 +113,16 @@ const restoreUser = async (req,res) => {
     }
 }
 
-const logOfUser = async (req,res) => {
+const logsOfUser = async (req,res) => {
   try {
     const {userId} = req.query;
 
     const logs = await UserService.logsOfUser(userId);
 
-  successResponse(res, "User logs Managed successfully", null, logs);
+  successResponse(res, "User logs get successfully", null, logs);
 } catch (error) {
-  errorResponse(res, "Error Manage USer Logs",500,error);
+  errorResponse(res, "Error get USer Logs",500,error);
 }
 }
 
-module.exports = { getUsers,signUpUser,signInUser,verifyUserRegister,verifyUserLogin,approveUser,deleteUser,restoreUser,logOfUser };
+module.exports = { getUsers,signUpUser,signInUser,verifyUserRegister,verifyUserLogin,approveUser,deleteUser,restoreUser,logsOfUser };
