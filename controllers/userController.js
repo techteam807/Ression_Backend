@@ -17,9 +17,9 @@ const getUsers = async (req,res) => {
 
 const signUpUser = async (req,res) => {
     try {
-        const {user_name,mobile_number} = req.body;
+        const {user_name,mobile_number,country_code} = req.body;
 
-        const Users = await UserService.signUpUser({user_name,mobile_number},res);
+        const Users = await UserService.signUpUser({user_name,mobile_number,country_code},res);
 
         if (Users.success) {
           return successResponse(res, Users.message, null, null);
@@ -35,9 +35,9 @@ const signUpUser = async (req,res) => {
 
 const signInUser = async (req,res) => {
     try {
-        const {mobile_number} = req.body;
+        const {mobile_number,country_code} = req.body;
 
-        const Users = await UserService.signInUser(mobile_number,res);
+        const Users = await UserService.signInUser(mobile_number,country_code,res);
 
         if (Users.success) {
           return successResponse(res, Users.message, null, null);
@@ -53,9 +53,9 @@ const signInUser = async (req,res) => {
 
 const verifyUserRegister = async (req,res) => {
   try {
-    const {mobile_number,otp} = req.body;
+    const {mobile_number,country_code,otp} = req.body;
 
-    const user = await UserService.verifyUserRegister(mobile_number,otp);
+    const user = await UserService.verifyUserRegister(mobile_number,country_code,otp);
 
     // const Users = await UserService.signInUser(mobile_number);
    
@@ -67,9 +67,9 @@ const verifyUserRegister = async (req,res) => {
 
 const verifyUserLogin = async (req,res) => {
   try {
-    const {mobile_number,otp} = req.body;
+    const {mobile_number,country_code,otp} = req.body;
 
-    const user = await UserService.verifyUserLogin(mobile_number,otp);
+    const user = await UserService.verifyUserLogin(mobile_number,country_code,otp);
 
     // const Users = await UserService.signInUser(mobile_number);
    

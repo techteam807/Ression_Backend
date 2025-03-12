@@ -7,13 +7,13 @@ const { getUser,signUpUser,signInUser,approveUser,deleteUser,restoreUser } = req
 const router = express.Router();
 
 router.get('/getUsers',validateRequest(getUser),UserController.getUsers);
-router.post('/signUpUser',validateRequest(signUpUser),UserController.signUpUser);
+router.post('/signUpUser',UserController.signUpUser);
 router.post('/verifySignUp',UserController.verifyUserRegister);
-router.post('/signInUser',validateRequest(signInUser),UserController.signInUser);
+router.post('/signInUser',UserController.signInUser);
 router.post('/verifySignIn',UserController.verifyUserLogin);
-router.put('/approveUser',validateRequest(approveUser),UserController.approveUser);
-router.put('/deleteUser',validateRequest(deleteUser),UserController.deleteUser);
-router.put('/restoreUser',validateRequest(restoreUser),UserController.restoreUser);
+router.put('/approveUser',UserController.approveUser);
+router.put('/deleteUser',UserController.deleteUser);
+router.put('/restoreUser',UserController.restoreUser);
 router.get('/getlogs',UserController.logsOfUser)
 
 module.exports = router;

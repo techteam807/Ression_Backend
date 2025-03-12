@@ -137,7 +137,7 @@ await axios.post(interaktUrl, {
 };
 
 const signUpUser = async (userData) => {
-  let user = await User.findOne({ mobile_number: userData.mobile_number });
+  let user = await User.findOne({ country_code: userData.country_code, mobile_number: userData.mobile_number });
 
   if (user) {
     if (user.user_status === "deleted") {
@@ -153,6 +153,7 @@ const signUpUser = async (userData) => {
     user = await User.create({
       user_name: userData.user_name,
       mobile_number: userData.mobile_number,
+      country_code: userData.country_code,
       verified: false,
     });
   }
@@ -170,8 +171,8 @@ const signUpUser = async (userData) => {
   const otp = Math.floor(100000 + Math.random() * 900000);
   const expiration = new Date(Date.now() + 2 * 60 * 1000); // OTP expires in 2 minutes
 
-  const countryCode = userData.mobile_number.slice(0, 3);
-  const phoneNumber = userData.mobile_number.slice(3);
+  const countryCode = userData.country_code;
+  const phoneNumber = userData.mobile_number;
 
   await axios.post(
     interaktUrl,
@@ -307,8 +308,8 @@ if (user.user_status !== "approve") {
   
 };
 
-const signInUser = async (mobile_number) => {
-  let user = await User.findOne({ mobile_number });
+const signInUser = async (mobile_number,country_code) => {
+  let user = await User.findOne({ country_code,mobile_number });
 
   if (!user) {
     return { success: false, message: "User not found", statusCode: 404 };
@@ -338,8 +339,8 @@ const signInUser = async (mobile_number) => {
   await axios.post(
     interaktUrl,
     {
-      countryCode: mobile_number.slice(0, 3),
-      phoneNumber: mobile_number.slice(3),
+      countryCode: country_code,
+      phoneNumber: mobile_number,
       callbackData: "OTP",
       type: "Template",
       template: { name: "doshion_app", languageCode: "en", bodyValues: [otp.toString()], buttonValues: { 0: [otp.toString()] } },
@@ -359,8 +360,8 @@ const signInUser = async (mobile_number) => {
 
 
 
-const verifyUserRegister = async (mobile_number, otp) => {
-  const user = await User.findOne({ mobile_number });
+const verifyUserRegister = async (mobile_number,country_code, otp) => {
+  const user = await User.findOne({ country_code,mobile_number });
 
   if (!user) {
     return response.notFound("User not found");
@@ -393,8 +394,8 @@ const verifyUserRegister = async (mobile_number, otp) => {
   }
 };
 
-const verifyUserLogin = async (mobile_number, otp) => {
-  const user = await User.findOne({ mobile_number });
+const verifyUserLogin = async (mobile_number,country_code, otp) => {
+  const user = await User.findOne({ country_code,mobile_number });
 
   //current time
   const currentIST = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
