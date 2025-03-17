@@ -1,12 +1,13 @@
 
 const Product = require("../models/productModel");
 const Customer = require("../models/customerModel");
+const { ProductEnum } = require("../config/global");
 
 // const getAllProducts = async (filter ={}) => {
 //   return await Product.find(filter);
 // };
 
-const getAllProducts = async (filter = {}, search, page, limit) => {
+const getAllProductsold = async (filter = {}, search, page, limit) => {
   if(search) {
     filter.$or = [
       // { productName: new RegExp(search, 'i') },
@@ -29,6 +30,30 @@ const getAllProducts = async (filter = {}, search, page, limit) => {
     totalPages:Math.ceil(totalRecords/ limit),
     products,
   };
+};
+
+const getAllProducts = async (filter = {}, search) => {
+
+  if(search) {
+    filter.$or = [
+      { productCode: new RegExp(search, "i")},
+      { resinType: new RegExp(search, "i") },
+      {  productStatus: new RegExp(search, "i") },
+    ];
+  }
+
+  const products = await Product.find(filter);
+
+  const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW);
+  const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED);
+  const inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
+
+  return {
+    newProducts,
+    exhaustedProducts,
+    inuseProducts
+  };
+
 };
 
 const getProductById = async (id) => {

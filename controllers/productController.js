@@ -1,7 +1,7 @@
 const { successResponse, errorResponse } = require("../config/response");
 const productService = require("../services/productService");
 
-const getProduct = async (req, res) => {
+const getProductOLd = async (req, res) => {
   try {
     const { active, search, page = 1, limit = 10 } = req.query;
     let filter = {};
@@ -18,6 +18,24 @@ const getProduct = async (req, res) => {
     errorResponse(res, "Error fetching products",500,error);
   }
 };
+
+const getProduct = async (req, res) => {
+  try {
+    const { active, search } = req.query;
+    let filter = {};
+
+    if (active === "true") {
+      filter.isActive = true;
+    } else if (active === "false") {
+      filter.isActive = false;
+    }
+
+    const result = await productService.getAllProducts(filter, search);
+    successResponse(res, "Products fetched successfully" , null , result);
+  } catch (error) {
+    errorResponse(res, "Error fetching products",500,error);
+  }
+}
 
 const AddProduct = async (req, res) => {
   try {
