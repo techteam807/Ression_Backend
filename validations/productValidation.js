@@ -6,11 +6,13 @@ const createProduct = Joi.object({
   //   "string.empty": "Product name is required",
   // }),
   productCode: Joi.string()
-    .pattern(/^[A-Za-z]{4}\d{4}$/)
+    // .pattern(/^[A-Za-z]{4}\d{4}$/)
+    .pattern(/^\d+\.\d+\.\d+\.[A-Za-z]$/)
     .required()
     .messages({
       "string.empty": "Product code is required",
-      "string.pattern.base": "Product code must have 4 letters followed by 4 digits (e.g., ABCD1234)",
+      // "string.pattern.base": "Product code must have 4 letters followed by 4 digits (e.g., ABCD1234)",
+      "string.pattern.base":"Product code must follow the format: 1054.59.25.P"
     }),
   // productDesc: Joi.string().allow(""),
   connectorType:Joi.string().allow(""),
