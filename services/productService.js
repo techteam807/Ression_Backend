@@ -49,36 +49,36 @@ const getAllProducts = async (filter = {}, search) => {
   const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED);
 
   // all fields
-  let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
+  // let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
 
-  const Cutomers = await Customer.find({ products: { $in : inuseProducts.map(p => p._id)}});
+  // const Cutomers = await Customer.find({ products: { $in : inuseProducts.map(p => p._id)}});
 
-  inuseProducts = inuseProducts.map(product => {
-    const customersForProduct = Cutomers.filter(cust => cust.products.includes(product._id.toString()));
-    return {
-      ...product.toObject(),
-      customers: customersForProduct,
-    };
-  });
+  // inuseProducts = inuseProducts.map(product => {
+  //   const customersForProduct = Cutomers.filter(cust => cust.products.includes(product._id.toString()));
+  //   return {
+  //     ...product.toObject(),
+  //     customers: customersForProduct,
+  //   };
+  // });
 
-  // //relevent fields
-  //  let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
+  //relevent fields
+   let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
 
-  //  const Customers = await Customer.find(
-  //    { products: { $in: inuseProducts.map((p) => p._id) } },
-  //    "contact_number first_name last_name mobile email display_name products" // Ensure 'products' is included
-  //  );
+   const Customers = await Customer.find(
+     { products: { $in: inuseProducts.map((p) => p._id) } },
+     "contact_number first_name last_name mobile email display_name products" // Ensure 'products' is included
+   );
  
-  //  inuseProducts = inuseProducts.map((product) => {
-  //    const customersForProduct = Customers.filter(
-  //      (cust) => Array.isArray(cust.products) && cust.products.includes(product._id.toString()) // Safe check
-  //    );
+   inuseProducts = inuseProducts.map((product) => {
+     const customersForProduct = Customers.filter(
+       (cust) => Array.isArray(cust.products) && cust.products.includes(product._id.toString()) // Safe check
+     );
  
-  //    return {
-  //      ...product.toObject(),
-  //      customers: customersForProduct,
-  //    };
-  //  });
+     return {
+       ...product.toObject(),
+       Customer:customersForProduct.length > 0 ? customersForProduct[0] : null,
+     };
+   });
  
   return {
     newProducts,
