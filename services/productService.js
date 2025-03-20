@@ -133,4 +133,8 @@ const associateProductWithCustomer = async (customerId, productId) => {
     return await Product.findOne({productCode:product_code});
   }
 
-module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct };
+  const getMultipleProductByCode = async (product_codes) => {
+    return await Product.find({productCode: {$in:product_codes}});
+  }
+
+module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode };

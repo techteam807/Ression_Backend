@@ -8,5 +8,5 @@ router.get('/',WareHouseController.getAllWareHouses);
 router.get('/code',WareHouseController.getWareHousesByCode);
 router.post('/',validateRequest(createWareHouse),WareHouseController.createWareHouses);
 router.delete('/delete/:id',WareHouseController.deleteWareHouses);
-
+router.post('/products',WareHouseController.scanMultipleProductsByCode)
 module.exports = router;

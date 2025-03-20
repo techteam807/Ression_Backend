@@ -56,4 +56,28 @@ const deleteWareHouses = async (req, res) => {
     }
 };
 
-module.exports = { getAllWareHouses, getWareHousesByCode, createWareHouses, deleteWareHouses};
+const scanMultipleProductsByCode = async (req,res) => {
+  try { 
+    const { Product_Codes } = req.body;
+   
+    if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
+      return errorResponse(res, "Invalid Data Pass", 400, null);;
+  }
+
+  const result = await WareHouseService.scanMultipleProducts(Product_Codes);
+
+  if(result.success)
+  {
+    return successResponse(res, "Products scanned successfully", null, null);
+  }
+  else
+  {
+    return errorResponse(res, result.message, 400, null);
+  }
+
+} catch (error) {
+    errorResponse(res, "Error While Scanning  Product codes",500,error);
+}
+};
+
+module.exports = { getAllWareHouses, getWareHousesByCode, createWareHouses, deleteWareHouses, scanMultipleProductsByCode};
