@@ -47,14 +47,14 @@ const getCustomers = async (req, res) => {
     const { search, page = 1, limit = 10 } = req.query;
     const result = await getAllcustomers(search, page, limit);
     const { customers, ...pagination } = result;
-    successResponse(
+    return successResponse(
       res,
       "Cutomers fetched successfully",
       pagination,
       customers
     );
   } catch (error) {
-    errorResponse(res, "Error fetching Cutomers",500,error);
+    return errorResponse(res, "Error fetching Cutomers",500,error);
   }
 };
 
@@ -68,9 +68,9 @@ const getCustomerByCode = async (req, res) => {
       return errorResponse(res, "Customer not found", 404);
     }
 
-    successResponse(res, "Customer fetched successfully", null, customer);
+    return successResponse(res, "Customer fetched successfully", null, customer);
   } catch (error) {
-    errorResponse(res, "Error fetching customer by code" ,500,error);
+    return errorResponse(res, "Error fetching customer by code" ,500,error);
   }
 };
 
@@ -125,10 +125,10 @@ const ManageCustomerAndProducts = async(req, res) => {
       return errorResponse(res, null, result.statusCode, result.error);
     }
     
-    successResponse(res, "Customer Products Managed successfully", null, result);
+    return successResponse(res, "Customer Products Managed successfully", null, result);
 
   } catch (error) {
-    errorResponse(res, "Error Managing customer Products", 500, error);
+    return errorResponse(res, "Error Managing customer Products", 500, error);
 }
 };
 

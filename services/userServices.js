@@ -50,6 +50,10 @@ const getUsers = async (user_status, search, page, limit) => {
   };
 };
 
+const getUserByMobileNumber = async(mobile_number) => {
+return await User.findOne({mobile_number:mobile_number});
+};
+
 const signUpUserOld = async (userData,res) => {
 //   const existingUser = await User.findOne({
 //     mobile_number: userData.mobile_number,
@@ -447,63 +451,96 @@ const verifyUserLogin = async (mobile_number,country_code, otp) => {
 };
 
 const approveUser = async (mobile_number) => {
-  const user = await User.findOne({ mobile_number });
+  const user = await getUserByMobileNumber(mobile_number);
 
-  if (!user) throw new Error("User not found");
+  if (!user)
+  {
+    return { success: false, message: "User not found"};
+  }
 
   if (user.user_status === "approve") {
-    throw new Error("User is already approved.");
+    // throw new Error("User is already approved.");
+    return { success: false, message: "User is already approved."};
   }
 
   if (user.user_status !== "pending") {
-    throw new Error("Only pending users can be approved.");
+    // throw new Error("Only pending users can be approved.");
+    return { success: false, message: "Only pending users can be approved."};
   }
 
-  return await User.findOneAndUpdate(
+  const approvedUser = await User.findOneAndUpdate(
     { mobile_number },
     { user_status: "approve" },
     { new: true }
   );
+
+  return {
+    success: true,
+    message: "User approved successfully",
+    data: approvedUser,
+  };
 };
 
 const deleteUser = async (mobile_number) => {
-  const user = await User.findOne({ mobile_number });
+  const user = await getUserByMobileNumber(mobile_number);
 
-  if (!user) throw new Error("User not found");
+  if (!user) 
+    {
+      return { success: false, message: "User not found"};
+    }
 
   if (user.user_status === "delete") {
-    throw new Error("User is already deleted.");
+    // throw new Error("User is already deleted.");
+    return { success: false, message: "User is already deleted."};
   }
 
   if (user.user_status !== "approve") {
-    throw new Error("Only approve users can be deleted.");
+    // throw new Error("Only approve users can be deleted.");
+    return { success: false, message: "Only approve users can be deleted."};
   }
 
-  return await User.findOneAndUpdate(
+  const deletedUser = await User.findOneAndUpdate(
     { mobile_number },
     { user_status: "delete" },
     { new: true }
   );
+
+  return {
+    success: true,
+    message: "User deleted successfully",
+    data: deletedUser,
+  };
 };
 
 const restoreUser = async (mobile_number) => {
-  const user = await User.findOne({ mobile_number });
+  const user = await getUserByMobileNumber(mobile_number);
 
-  if (!user) throw new Error("User not found");
+  if (!user)
+    {
+      return { success: false, message: "User not found"};
+    }
 
   if (user.user_status === "pending") {
-    throw new Error("User is already pending.");
+    // throw new Error("User is already pending.");
+    return { success: false, message: "User is already pending."};
   }
 
   if (user.user_status !== "delete") {
-    throw new Error("Only deleted users can be restored.");
+    // throw new Error("Only deleted users can be restored.");
+    return { success: false, message: "Only deleted users can be restored."};
   }
 
-  return await User.findOneAndUpdate(
+  const restoredUser = await User.findOneAndUpdate(
     { mobile_number },
     { user_status: "pending" },
     { new: true }
   );
+
+  return {
+    success: true,
+    message: "User restored successfully",
+    data: restoredUser,
+  };
 };
 
 const logsOfUser = async (userId) => {

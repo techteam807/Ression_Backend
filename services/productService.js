@@ -97,15 +97,59 @@ const createProduct = async (data) => {
 };
 
 const updateProduct = async (id, data) => {
-  return await Product.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const Product = await getProductById(id);
+
+  if(!Product)
+    {
+      return { success: false, message: "Product not found"};
+    }
+    
+  const product = Product.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+
+  return {
+    success: true,
+    message: "Product Updated successfully",
+    data: product,
+  };
 };
 
 const deleteProduct = async (id) => {
-  return await Product.findByIdAndUpdate(id,{isActive:false},{new:true});
+  const Product = await getProductById(id);
+
+  if(!Product)
+  {
+    return { success: false, message: "Product not found"};
+  }
+
+  const product = await Product.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED},{new:true});
+
+  await Customer.updateMany(
+    {products:id},
+    {$pull: {products:id} }
+  );
+
+  return {
+    success: true,
+    message: "Product deleted successfully",
+    data: product,
+  };
 };
 
 const restoreProduct = async (id) => {
-  return await Product.findByIdAndUpdate(id,{isActive:true},{new:true});
+  const Product = await getProductById(id);
+
+  if(!Product)
+  {
+      return { success: false, message: "Product not found"};
+  }
+
+  const product = Product.findByIdAndUpdate(id,{isActive:true},{new:true});
+
+  return {
+    success: true,
+    message: "Product Restored successfully",
+    data: product,
+  };
 };
 
 const associateProductWithCustomer = async (customerId, productId) => {

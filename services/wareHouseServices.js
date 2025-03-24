@@ -19,19 +19,39 @@ const getwareHousesByCode = async(wareHouse_code) => {
     return await WareHouse.findOne({wareHouseCode:wareHouse_code});
 };
 
+const getwareHousesById = async(id) => {
+    return await WareHouse.findById(id);
+};
+
 const createWareHouse = async (wareHouse_code) => {
     return await WareHouse.create({wareHouseCode:wareHouse_code});
 };
 
 const deleteWareHouse = async (id) => {
-    return await WareHouse.findByIdAndDelete(id);
+    const WareHouse = await getwareHousesById(id);
+
+    if(!WareHouse)
+    {
+        return { success: false, message: "WareHouse not found"};
+    }
+    const wareHouse = await WareHouse.findByIdAndDelete(id);
+
+    return {
+        success: true,
+        message: "WareHouse deleted successfully",
+        data: wareHouse,
+      };
 };
 
-const scanMultipleProducts = async (Product_Codes) => {
-    console.log("Received Product Codes:", Product_Codes);
+const scanMultipleProducts = async (Product_Codes,wareHouse_code) => {
+    const warehouse = await getwareHousesByCode(wareHouse_code);
+
+    if(!warehouse)
+    {
+        return { success: false, message: `No WareHouse found for given code: ${wareHouse_code}`};
+    }
     
     const Products = await ProductService.getMultipleProductByCode(Product_Codes);
-    console.log("p",Products)
 
     if (!Products.length) {
         return { success: false, message: "No products found for given codes." };
@@ -39,13 +59,10 @@ const scanMultipleProducts = async (Product_Codes) => {
 
     //extract products
     const exhaustedProducts = Products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED);
-    console.log("e",exhaustedProducts);
 
     const newProducts = Products.filter((p) => p.productStatus === ProductEnum.NEW);
-    console.log("n",newProducts);
 
     const notProcedProduts = Products.filter((p) => p.productStatus !== ProductEnum.EXHAUSTED);
-    console.log("Nop",notProcedProduts);
 
     //extract productcodes
     const exhaustedCodes = exhaustedProducts.map((ep) => ep.productCode).join(", ");

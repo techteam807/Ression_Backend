@@ -11,11 +11,16 @@ const getProductOLd = async (req, res) => {
     } else if (active === "false") {
       filter.isActive = false;
     }
-    const result = await productService.getAllProducts(filter, search, page, limit);
-    const {products, ...pagination} = result
-    successResponse(res, "Products fetched successfully", pagination, products);
+    const result = await productService.getAllProducts(
+      filter,
+      search,
+      page,
+      limit
+    );
+    const { products, ...pagination } = result;
+    return successResponse(res, "Products fetched successfully", pagination, products);
   } catch (error) {
-    errorResponse(res, "Error fetching products",500,error);
+    return errorResponse(res, "Error fetching products", 500, error);
   }
 };
 
@@ -31,26 +36,33 @@ const getProduct = async (req, res) => {
     }
 
     const result = await productService.getAllProducts(filter, search);
-    successResponse(res, "Products fetched successfully" , null , result);
+    return successResponse(res, "Products fetched successfully", null, result);
   } catch (error) {
-    errorResponse(res, "Error fetching products",500,error);
+    return errorResponse(res, "Error fetching products", 500, error);
   }
-}
+};
 
 const AddProduct = async (req, res) => {
   try {
-    const { productCode, connectorType, distributorType, size, resinType, productStatus } = req.body;
+    const {
+      productCode,
+      connectorType,
+      distributorType,
+      size,
+      resinType,
+      productStatus,
+    } = req.body;
     const newProduct = await productService.createProduct({
       productCode,
       connectorType,
       distributorType,
       size,
       resinType,
-      productStatus
+      productStatus,
     });
-    successResponse(res, "Product created successfully", null, newProduct);
+    return successResponse(res, "Product created successfully", null, newProduct);
   } catch (error) {
-    errorResponse(
+    return errorResponse(
       res,
       error.message.includes("E11000")
         ? "Product code must be unique"
@@ -63,35 +75,50 @@ const AddProduct = async (req, res) => {
 const EditProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedProduct = await productService.updateProduct(id, req.body);
-    if (!updatedProduct) return errorResponse(res, "Product not found", 404);
-    successResponse(res, "Product updated successfully", null, updatedProduct);
+
+    const result = await productService.updateProduct(id, req.body);
+
+    if (!result.success) {
+      return errorResponse(res, result.message, 404, null);
+    }
+
+    return successResponse(res, result.message, null, result.data);
   } catch (error) {
-    errorResponse(res, "Error updating product",500,error);
+    return errorResponse(res, "Error updating product", 500, error);
   }
 };
 
 const DeleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedProduct = await productService.deleteProduct(id);
-    if (!deletedProduct) return errorResponse(res, "Product not found", 404);
-    successResponse(res, "Product deleted successfully", null, deletedProduct);
+
+    const result = await productService.deleteProduct(id);
+
+    if (!result.success) {
+      return errorResponse(res, result.message, 404, null);
+    }
+
+    return successResponse(res, result.message, null, result.data);
   } catch (error) {
-    errorResponse(res, "Error deleting product",500,error);
+    return errorResponse(res, "Error deleting product", 500, error);
   }
 };
 
-const RestoreProduct = async (req,res) => {
+const RestoreProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const restoreProduct = await productService.restoreProduct(id);
-    if(!restoreProduct) return errorResponse(res, "Product not found", 404);
-    successResponse(res, "Product restored successfully", null, restoreProduct);
+
+    const result = await productService.restoreProduct(id);
+
+    if (!result.success) {
+      return errorResponse(res, result.message, 404, null);
+    }
+
+    return successResponse(res, result.message, null, result.data);
   } catch (error) {
-    errorResponse(res, "Error restoreing product",500,error);
+    return errorResponse(res, "Error restoreing product", 500, error);
   }
-}
+};
 
 const addProductToCustomer = async (req, res) => {
   try {
@@ -104,14 +131,14 @@ const addProductToCustomer = async (req, res) => {
       customerId,
       productId
     );
-    successResponse(
+    return successResponse(
       res,
       "Product associated with customer successfully",
       null,
       updatedCustomer
     );
   } catch (error) {
-    errorResponse(res, error.message,500,error);
+    return errorResponse(res, error.message, 500, error);
   }
 };
 
@@ -125,14 +152,14 @@ const getCustomerProducts = async (req, res) => {
     if (!customerWithProducts)
       return errorResponse(res, "Customer not found", 404);
 
-    successResponse(
+    return successResponse(
       res,
       "Customer products retrieved successfully",
       null,
       customerWithProducts
     );
   } catch (error) {
-    errorResponse(res, "Error fetching customer products",500,error);
+    return errorResponse(res, "Error fetching customer products", 500, error);
   }
 };
 
@@ -146,9 +173,9 @@ const getProductByCode = async (req, res) => {
       return errorResponse(res, "product not found", 404);
     }
 
-    successResponse(res, "product fetched successfully", null, product);
+    return successResponse(res, "product fetched successfully", null, product);
   } catch (error) {
-    errorResponse(res, "Error fetching product by code",500,error);
+    return errorResponse(res, "Error fetching product by code", 500, error);
   }
 };
 
