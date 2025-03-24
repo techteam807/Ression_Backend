@@ -1,5 +1,5 @@
 
-const Product = require("../models/productModel");
+const ProductS = require("../models/productModel");
 const Customer = require("../models/customerModel");
 const { ProductEnum } = require("../config/global");
 
@@ -43,10 +43,27 @@ const getAllProducts = async (filter = {}, search) => {
   }
 
   // const products = await Product.find(filter);//default order
-  const products = await Product.find(filter).sort({ updatedAt: -1 });//desc order
+  const products = await ProductS.find(filter).sort({ updatedAt: -1 });//desc order
 
-  const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW);
-  const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED);
+  const formatAdapterSize = (size) => {
+    if (!size) return size; 
+
+    let formattedSize = size.replace(/"/g, ' inch'); // Replace all occurrences of `"`
+    
+    // Check if there's a value in parentheses
+    formattedSize = formattedSize.replace(/\((.*?)\)/g, (match, p1) => ` | ${p1} mm`);
+
+    // Remove " | " if there's no mm value
+    return formattedSize.includes('|') ? formattedSize : formattedSize.replace(' | ', '');
+};
+
+const formatProduct = (product) => ({
+  ...product.toObject(), 
+  adapterSize: formatAdapterSize(product.adapterSize), 
+});
+
+  const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
+  const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED).map(formatProduct);
 
   // all fields
   // let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
@@ -62,7 +79,7 @@ const getAllProducts = async (filter = {}, search) => {
   // });
 
   //relevent fields
-   let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
+   let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE).map(formatProduct);
 
    const Customers = await Customer.find(
      { products: { $in: inuseProducts.map((p) => p._id) } },
@@ -75,8 +92,8 @@ const getAllProducts = async (filter = {}, search) => {
      );
  
      return {
-       ...product.toObject(),
-       Customer:customersForProduct.length > 0 ? customersForProduct[0] : null,
+      ...formatProduct(product),
+       Customer: customersForProduct.length > 0 ? customersForProduct[0] : null,
      };
    });
  
@@ -89,11 +106,11 @@ const getAllProducts = async (filter = {}, search) => {
 };
 
 const getProductById = async (id) => {
-  return await Product.findById(id);
+  return await ProductS.findById(id);
 };
 
 const createProduct = async (data) => {
-  return await Product.create(data);
+  return await ProductS.create(data);
 };
 
 const updateProduct = async (id, data) => {
@@ -104,7 +121,7 @@ const updateProduct = async (id, data) => {
       return { success: false, message: "Product not found"};
     }
     
-  const product = Product.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const product =await ProductS.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 
   return {
     success: true,
@@ -121,7 +138,7 @@ const deleteProduct = async (id) => {
     return { success: false, message: "Product not found"};
   }
 
-  const product = await Product.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED},{new:true});
+  const product = await ProductS.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED},{new:true});
 
   await Customer.updateMany(
     {products:id},
@@ -143,7 +160,7 @@ const restoreProduct = async (id) => {
       return { success: false, message: "Product not found"};
   }
 
-  const product = Product.findByIdAndUpdate(id,{isActive:true},{new:true});
+  const product =await ProductS.findByIdAndUpdate(id,{isActive:true},{new:true});
 
   return {
     success: true,
@@ -156,7 +173,7 @@ const associateProductWithCustomer = async (customerId, productId) => {
     const customer = await Customer.findById(customerId);
     if (!customer) throw new Error("Customer not found");
   
-    const product = await Product.findById(productId);
+    const product = await ProductS.findById(productId);
     if (!product) throw new Error("Product not found");
   
     if (customer.products.includes(productId)) {
@@ -174,11 +191,11 @@ const associateProductWithCustomer = async (customerId, productId) => {
   };
 
   const getProductBycode = async (product_code) => {
-    return await Product.findOne({productCode:product_code});
+    return await ProductS.findOne({productCode:product_code});
   }
 
   const getMultipleProductByCode = async (product_codes) => {
-    return await Product.find({productCode: {$in:product_codes}});
+    return await ProductS.find({productCode: {$in:product_codes}});
   }
 
 module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode };

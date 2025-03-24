@@ -7,25 +7,28 @@ const createProduct = Joi.object({
   // }),
   productCode: Joi.string()
     // .pattern(/^[A-Za-z]{4}\d{4}$/)
-    .pattern(/^\d+\.\d+\.\d+\.[A-Za-z]$/)
+    .pattern(/^\d+\.\d+\.\d+\.[A-Za-z]{1,4}$/)
     .required()
     .messages({
       "string.empty": "Product code is required",
       // "string.pattern.base": "Product code must have 4 letters followed by 4 digits (e.g., ABCD1234)",
-      "string.pattern.base":"Product code must follow the format: 1054.59.25.P"
+      "string.pattern.base":"Product code must follow the format: 0000.00.00.ABCD Upto"
     }),
   // productDesc: Joi.string().allow(""),
-  connectorType:Joi.string().allow(""),
+  // connectorType:Joi.string().allow(""),
   distributorType:Joi.string().allow(""),
-  size:Joi.string().allow(""),
-  resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
-    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
-    "string.empty": "Resin type is required",
-  }),
-  productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
-    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
-    "string.empty": "Resin type is required",
-  }),
+  // size:Joi.string().allow(""),
+  // resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+  //   "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+  //   "string.empty": "Resin type is required",
+  // }),
+  resinType:Joi.string().allow(""),
+  adapterSize:Joi.string().allow(""),
+  vesselSize:Joi.string().allow("")
+  // productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+  //   "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+  //   "string.empty": "Resin type is required",
+  // }),
 });
 
 const updateProduct = Joi.object({
@@ -34,17 +37,20 @@ const updateProduct = Joi.object({
     //   }), 
     // productDesc: Joi.string().allow(""),
     id: Joi.string().required(),
-    connectorType:Joi.string().allow(""),
+    // connectorType:Joi.string().allow(""),
     distributorType:Joi.string().allow(""),
-    size:Joi.string().allow(""),
-    resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
-    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
-    "string.empty": "Resin type is required",
-  }),
-  productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
-    "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
-    "string.empty": "Resin type is required",
-  }),
+    // size:Joi.string().allow(""),
+    resinType:Joi.string().allow(""),
+    adapterSize:Joi.string().allow(""),
+    vesselSize:Joi.string().allow("")
+  //   resinType:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+  //   "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+  //   "string.empty": "Resin type is required",
+  // }),
+  // productStatus:Joi.string().valid(ProductEnum.NEW,ProductEnum.IN_USE,ProductEnum.EXHAUSTED).required().messages({
+  //   "any.only": 'Resin type must be one of "new", "exhausted", or "inuse"',
+  //   "string.empty": "Resin type is required",
+  // }),
 });
 
 const deleteProduct = Joi.object({

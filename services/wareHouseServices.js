@@ -1,5 +1,5 @@
 const { ProductEnum } = require("../config/global");
-const WareHouse = require("../models/wareHouseModel");
+const WareHouseS = require("../models/wareHouseModel");
 const Product = require("../models/productModel");
 const ProductService = require("../services/productService")
 
@@ -10,21 +10,21 @@ const getWareHouses = async(filter = {}, search) => {
         ];
       }
 
-      const wareHouse = await WareHouse.find(filter);
+      const wareHouse = await WareHouseS.find(filter);
     
       return { wareHouse};
 };
 
 const getwareHousesByCode = async(wareHouse_code) => {
-    return await WareHouse.findOne({wareHouseCode:wareHouse_code});
+    return await WareHouseS.findOne({wareHouseCode:wareHouse_code});
 };
 
 const getwareHousesById = async(id) => {
-    return await WareHouse.findById(id);
+    return await WareHouseS.findById(id);
 };
 
 const createWareHouse = async (wareHouse_code) => {
-    return await WareHouse.create({wareHouseCode:wareHouse_code});
+    return await WareHouseS.create({wareHouseCode:wareHouse_code});
 };
 
 const deleteWareHouse = async (id) => {
@@ -34,7 +34,7 @@ const deleteWareHouse = async (id) => {
     {
         return { success: false, message: "WareHouse not found"};
     }
-    const wareHouse = await WareHouse.findByIdAndDelete(id);
+    const wareHouse = await WareHouseS.findByIdAndDelete(id);
 
     return {
         success: true,

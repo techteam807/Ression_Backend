@@ -46,19 +46,17 @@ const AddProduct = async (req, res) => {
   try {
     const {
       productCode,
-      connectorType,
-      distributorType,
-      size,
       resinType,
-      productStatus,
+      adapterSize,
+      vesselSize,
+      distributorType,
     } = req.body;
     const newProduct = await productService.createProduct({
       productCode,
-      connectorType,
-      distributorType,
-      size,
       resinType,
-      productStatus,
+      adapterSize,
+      vesselSize,
+      distributorType
     });
     return successResponse(res, "Product created successfully", null, newProduct);
   } catch (error) {
