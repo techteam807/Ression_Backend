@@ -187,7 +187,15 @@ const uploadProducts = async (req, res) => {
 
     const result = await productService.uploadProducts(Products);
 
-    return successResponse(res, "products Added successfully", null, result);
+    if(result.duplicateCount === 0)
+    {
+      return successResponse(res, "Products added successfully", null, result.addedProducts);
+    }
+    else
+    {
+      return successResponse(res, `${result.insertedCount} Product Are Added SuccessFully & ${result.duplicateCount} Product Code ${result.duplicateProductCodes} Are Exists`)
+    }
+
   } catch (error) {
     return errorResponse(res, "Error while adding products", 500, error);
   }

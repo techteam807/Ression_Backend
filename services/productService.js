@@ -199,7 +199,34 @@ const associateProductWithCustomer = async (customerId, productId) => {
   };
 
   const uploadProducts = async(products) => {
-    return await ProductS.insertMany(products);
+    const insertedProducts = [];
+    const duplicateProductCodes = [];
+    const addedProducts = [];
+
+    for (const product of products) {
+      const ExisProduct = await getProductBycode(product.productCode);
+
+      if(ExisProduct)
+      {
+        duplicateProductCodes.push(product.productCode);
+      }
+      else
+      {
+        insertedProducts.push(product);
+      }
+    }
+
+    if (insertedProducts.length > 0) {
+      const AddedProducts = await ProductS.insertMany(insertedProducts);
+      addedProducts.push(AddedProducts);
+    }
+
+    return {
+      insertedCount: insertedProducts.length,
+      duplicateCount: duplicateProductCodes.length,
+      duplicateProductCodes,
+      addedProducts,
+    };
   };
 
 module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode, uploadProducts };
