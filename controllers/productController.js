@@ -177,6 +177,22 @@ const getProductByCode = async (req, res) => {
   }
 };
 
+const uploadProducts = async (req, res) => {
+  try {
+    const { Products } = req.body;
+
+    if (!Array.isArray(Products) || Products.length === 0) {
+      return errorResponse(res, "Invalid Data Pass", 400, null);
+    }
+
+    const result = await productService.uploadProducts(Products);
+
+    return successResponse(res, "products Added successfully", null, result);
+  } catch (error) {
+    return errorResponse(res, "Error while adding products", 500, error);
+  }
+};
+
 module.exports = {
   AddProduct,
   DeleteProduct,
@@ -186,4 +202,5 @@ module.exports = {
   addProductToCustomer,
   getCustomerProducts,
   getProductByCode,
+  uploadProducts,
 };

@@ -192,10 +192,14 @@ const associateProductWithCustomer = async (customerId, productId) => {
 
   const getProductBycode = async (product_code) => {
     return await ProductS.findOne({productCode:product_code});
-  }
+  };
 
   const getMultipleProductByCode = async (product_codes) => {
     return await ProductS.find({productCode: {$in:product_codes}});
-  }
+  };
 
-module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode };
+  const uploadProducts = async(products) => {
+    return await ProductS.insertMany(products);
+  };
+
+module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode, uploadProducts };
