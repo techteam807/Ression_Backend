@@ -4,6 +4,7 @@ const Otp = require("../models/otpModel");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const moment = require('moment-timezone');
+const request = require("request");
 
 const lastOtpRequest = {};  
 
@@ -178,29 +179,31 @@ const signUpUser = async (userData) => {
   const countryCode = userData.country_code;
   const phoneNumber = userData.mobile_number;
 
-  await axios.post(
-    interaktUrl,
-    {
-      countryCode: countryCode,
-      phoneNumber: phoneNumber,
-      callbackData: "OTP",
-      type: "Template",
-      template: {
-        name: "doshion_app",
-        languageCode: "en",
-        bodyValues: [otp.toString()],
-        buttonValues: {
-          0: [otp.toString()],
-        },
-      },
-    },
-    {
-      headers: {
-        Authorization: `Basic ${interaktApiKey}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  // await axios.post(
+  //   interaktUrl,
+  //   {
+  //     countryCode: countryCode,
+  //     phoneNumber: phoneNumber,
+  //     callbackData: "OTP",
+  //     type: "Template",
+  //     template: {
+  //       name: "doshion_app",
+  //       languageCode: "en",
+  //       bodyValues: [otp.toString()],
+  //       buttonValues: {
+  //         0: [otp.toString()],
+  //       },
+  //     },
+  //   },
+  //   {
+  //     headers: {
+  //       Authorization: `Basic ${interaktApiKey}`,
+  //       "Content-Type": "application/json",
+  //     },
+  //   }
+  // );
+
+  await sendWhatsAppOtp(phoneNumber,otp);
 
   const otpRecord = await Otp.create({
     userId: user._id,
@@ -340,18 +343,18 @@ const signInUser = async (mobile_number,country_code) => {
   const otp = Math.floor(100000 + Math.random() * 900000);
   const expiration = new Date(Date.now() + 2 * 60 * 1000);
 
-  await axios.post(
-    interaktUrl,
-    {
-      countryCode: country_code,
-      phoneNumber: mobile_number,
-      callbackData: "OTP",
-      type: "Template",
-      template: { name: "doshion_app", languageCode: "en", bodyValues: [otp.toString()], buttonValues: { 0: [otp.toString()] } },
-    },
-    { headers: { Authorization: `Basic ${interaktApiKey}`, "Content-Type": "application/json" } }
-  );
-
+  // await axios.post(
+  //   interaktUrl,
+  //   {
+  //     countryCode: country_code,
+  //     phoneNumber: mobile_number,
+  //     callbackData: "OTP",
+  //     type: "Template",
+  //     template: { name: "doshion_app", languageCode: "en", bodyValues: [otp.toString()], buttonValues: { 0: [otp.toString()] } },
+  //   },
+  //   { headers: { Authorization: `Basic ${interaktApiKey}`, "Content-Type": "application/json" } }
+  // );
+  await sendWhatsAppOtp(mobile_number,otp);
   const otpRecord = await Otp.create({ userId: user._id, otp: otp.toString(), expiration });
 
   setTimeout(async () => {
@@ -563,6 +566,45 @@ const logsOfUser = async (userId) => {
   return logs;
 };
 
+const sendWhatsAppOtp = async (mobile_number, otp) => {
+  return new Promise((resolve, reject) => {
+    const options = {
+      method: "POST",
+      url: process.env.GALLABOX_URL,
+      headers: {
+        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
+        apikey: process.env.GALLABOX_API_KEY, // lowercase
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channelId: process.env.GALLABOX_CHANNEL_ID,
+        channelType: "whatsapp",
+        recipient: {
+          name: mobile_number,
+          phone: `91${mobile_number}`,
+        },
+        whatsapp: {
+          type: "template",
+          template: {
+            templateName: "bw_scan_app",
+            bodyValues: { otp: otp.toString() }, // Change from object to array
+          },
+        },
+      }),
+    };
+
+    request(options, (error, response) => {
+      if (error) {
+        console.error("Error sending WhatsApp OTP:", error);
+        return reject({ success: false, message: "Failed to send OTP via WhatsApp." });
+      }
+      console.log("WhatsApp Message Sent:", response.body);
+      resolve({ success: true, message: "OTP sent successfully." });
+    });
+  });
+};
+
+
 module.exports = {
   getUsers,
   signUpUser,
@@ -573,4 +615,5 @@ module.exports = {
   deleteUser,
   restoreUser,
   logsOfUser,
+  sendWhatsAppOtp
 };
