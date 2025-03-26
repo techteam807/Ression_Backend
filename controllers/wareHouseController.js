@@ -95,9 +95,9 @@ const scanMultipleProductsByCode = async (req, res) => {
     );
 
     if (result.success) {
-      return successResponse(res, "Products scanned successfully", null, null);
+      return successResponse(res, result.message, null, null);
     } else {
-      return errorResponse(res, result.message, 400, null);
+      return errorResponse(res, result.ProductCodes, 400, null);
     }
   } catch (error) {
     return errorResponse(
