@@ -7,6 +7,20 @@ const { ProductEnum } = require("../config/global");
 //   return await Product.find(filter);
 // };
 
+const formatAdapterSize = (size) => {
+  if (!size) return size;
+
+  let formattedSize = size.replace(/"/g, " inch"); // Replace all occurrences of `"`
+  formattedSize = formattedSize.replace(/\((.*?)\)/g, (match, p1) => ` | ${p1} mm`);
+
+  return formattedSize.includes("|") ? formattedSize : formattedSize.replace(" | ", "");
+};
+
+const formatProduct = (product) => ({
+  ...product.toObject(),
+  adapterSize: formatAdapterSize(product.adapterSize),
+});
+
 const getAllProductsold = async (filter = {}, search, page, limit) => {
   if(search) {
     filter.$or = [
@@ -44,39 +58,9 @@ const getAllProducts = async (filter = {}, search) => {
 
   // const products = await Product.find(filter);//default order
   const products = await ProductS.find(filter).sort({ updatedAt: -1 });//desc order
-
-  const formatAdapterSize = (size) => {
-    if (!size) return size; 
-
-    let formattedSize = size.replace(/"/g, ' inch'); // Replace all occurrences of `"`
-    
-    // Check if there's a value in parentheses
-    formattedSize = formattedSize.replace(/\((.*?)\)/g, (match, p1) => ` | ${p1} mm`);
-
-    // Remove " | " if there's no mm value
-    return formattedSize.includes('|') ? formattedSize : formattedSize.replace(' | ', '');
-};
-
-const formatProduct = (product) => ({
-  ...product.toObject(), 
-  adapterSize: formatAdapterSize(product.adapterSize), 
-});
-
+  
   const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
   const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED).map(formatProduct);
-
-  // all fields
-  // let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE);
-
-  // const Cutomers = await Customer.find({ products: { $in : inuseProducts.map(p => p._id)}});
-
-  // inuseProducts = inuseProducts.map(product => {
-  //   const customersForProduct = Cutomers.filter(cust => cust.products.includes(product._id.toString()));
-  //   return {
-  //     ...product.toObject(),
-  //     customers: customersForProduct,
-  //   };
-  // });
 
   //relevent fields
    let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE).map(formatProduct);
@@ -92,7 +76,7 @@ const formatProduct = (product) => ({
      );
  
      return {
-      ...formatProduct(product),
+      ...product,
        Customer: customersForProduct.length > 0 ? customersForProduct[0] : null,
      };
    });
