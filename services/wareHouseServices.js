@@ -188,7 +188,7 @@ const scanMultipleProducts = async (Product_Codes,wareHouse_code) => {
     const NewProductCodes = NewProducts.map(p => p.productCode).join(", ");
     const InUseProductCodes = InUseProducts.map(p => p.productCode).join(", ");
     const DeletedProductCodes = DeletedProducts.map(p => p.productCode).join(", ");
-    const NotFoundProductCodes = missingProductCodes.map(p => p.productCode).join(", ");
+    const NotFoundProductCodes = missingProductCodes.join(", ");;
 
     //push messeges
     if(NewProducts.length > 0)
