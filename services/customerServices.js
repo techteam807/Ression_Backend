@@ -277,7 +277,7 @@ const getCustomerBycode = async (customer_code) => {
 //   };
 // };
 
-const manageCustomerAndProduct = async (customer_code, product_code) => {
+const manageCustomerAndProductOLd = async (customer_code, product_code) => {
   const Customer = await getCustomerBycode(customer_code);
 
   if (!Customer) {
@@ -332,6 +332,81 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
   return {
     Customer,
   };
+};
+
+const manageCustomerAndProduct = async (customer_code, product_code) => {
+
+  //customer_code
+  if(customer_code && product_code)
+  {
+    const Customer = await getCustomerBycode(customer_code);
+    const ProductS = await ProductService.getProductBycode(product_code);
+
+    if (!Customer) {
+      return {
+        error:  new Error(`Customer not found with ${customer_code}`),
+        statusCode: 404,
+      };
+    }
+    else
+    {
+      Customer.products = Customer.products || [];
+      const CustomerproductIds = Customer.products.map((product) => product._id);
+
+      if (CustomerproductIds.length > 0) {
+        await Product.updateMany(
+          { _id: { $in: CustomerproductIds } },
+          { productStatus: ProductEnum.EXHAUSTED }
+        );
+        Customer.products = [];
+        await Customer.save();
+      }
+    }
+
+    if(!ProductS)
+      {
+        return {
+          error:  new Error(`Product Not Found With Code : ${customer_code}`),
+          statusCode: 404,
+        };
+      }
+      else
+      {
+        if(!ProductS.isActive)
+        {
+          return {
+            error:  new Error(`Product Not Active With Code : ${product_code}`),
+            statusCode: 404,
+          };
+        }
+        else if(ProductS.productStatus === ProductEnum.IN_USE)
+        {
+          return {
+            error:  new Error(`Product Status Found In Use With Code : ${product_code}`),
+            statusCode: 404,
+          };
+        } 
+        else if(ProductS.productStatus === ProductEnum.EXHAUSTED)
+        {
+          return {
+            error:  new Error(`Product Status Found Exhausted With Code : ${product_code}`),
+            statusCode: 404,
+          };
+        }
+        else
+        {
+          Customer.products.push(ProductS._id);
+          await Customer.save();
+  
+        await Product.findOneAndUpdate(
+          { productCode: product_code },
+          { productStatus: ProductEnum.IN_USE }
+        );
+        }
+      }
+
+      return {Customer};
+  }
 };
 
 module.exports = {
