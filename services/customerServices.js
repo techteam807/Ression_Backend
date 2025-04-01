@@ -180,12 +180,35 @@ const getAllcustomers = async (search, page, limit) => {
   };
 };
 
+// const getCustomerBycode = async (customer_code) => {
+//   return await Customer.findOne({ contact_number: customer_code }).populate({
+//     path: "products",
+//     select: "productCode resinType productStatus",
+//   });
+// };
+
 const getCustomerBycode = async (customer_code) => {
-  return await Customer.findOne({ contact_number: customer_code }).populate({
+  const customer = await Customer.findOne({ contact_number: customer_code }).populate({
     path: "products",
     select: "productCode resinType productStatus",
   });
+
+  if (!customer) return null;
+
+  // Extract cartridgeNum from cf_cartridge_size
+  const extractThirdNumber = (size) => {
+    const matches = size?.match(/\d+/g); // Extract all numbers from the string
+    return matches && matches.length >= 3 ? parseInt(matches[2], 10) : 1; // Get third number
+  };
+
+  const customerData = customer.toObject();
+  
+  // Add cartridgeNum to the response
+  customerData.cartridgeNum = extractThirdNumber(customerData.cf_cartridge_size);
+
+  return customerData;
 };
+
 
 // const replaceCustomersProductsOld = async (customer_code) => {
 //   const Customer = await getCustomerBycode(customer_code);
