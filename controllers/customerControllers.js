@@ -2,10 +2,6 @@ const {
   fetchAndStoreCustomers,
   getAllcustomers,
   getCustomerBycode,
-  replaceCustomersProducts,
-  replaceCustomersProducts1,
-  replaceCustomersProductsOld,
-  replaceCustomersProductsNew,
   getAccessToken,
   fetchAndStoreCustomers1,
   manageCustomerAndProduct
@@ -113,7 +109,7 @@ const getCustomerByCode = async (req, res) => {
 //   }
 // };
 
-const ManageCustomerAndProducts = async(req, res) => {
+const ManageCustomerAndProductsone = async(req, res) => {
   try {
 
     const {customer_code} = req.query;
@@ -126,6 +122,28 @@ const ManageCustomerAndProducts = async(req, res) => {
     }
     
     return successResponse(res, "Customer Products Managed successfully", null, result);
+
+  } catch (error) {
+    return errorResponse(res, "Error Managing customer Products", 500, error);
+}
+};
+
+const ManageCustomerAndProducts = async(req, res) => {
+  try {
+
+    const { customer_code, Product_Codes,  } = req.body;
+
+    if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
+      return errorResponse(res, "Invalid Data Pass", 400, null);
+    }
+
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes);
+
+    if (result.success) {
+      return successResponse(res, result.message, null, null);
+    } else {
+      return errorResponse(res, result.ProductCodes, 400, null);
+    }
 
   } catch (error) {
     return errorResponse(res, "Error Managing customer Products", 500, error);
