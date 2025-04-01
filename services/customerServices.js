@@ -436,7 +436,7 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
   let messages = [];
   let success = false;
 
-  const Customers = await getCustomerBycode(customer_code);
+  const Customers = await Customer.findOne({contact_number:customer_code});
   const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
 
   if (!Customers) {
