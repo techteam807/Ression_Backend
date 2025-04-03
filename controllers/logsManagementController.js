@@ -1,17 +1,8 @@
-const LogManagement = require('../models/logsManagement');
+const logService = require('../services/logManagementService');
 
 exports.createLog = async (req, res) => {
   try {
-    const { customerId, products, userId, status } = req.body;
-
-    const newLog = new LogManagement({
-      customerId,
-      products,
-      userId,
-      status,
-    });
-
-    const log = await newLog.save();
+    const log = await logService.createLog(req.body);
     res.status(201).json(log);
   } catch (error) {
     console.error(error);
@@ -19,24 +10,17 @@ exports.createLog = async (req, res) => {
   }
 };
 
-// Get all log entries with pagination
 exports.getAllLogs = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
 
-    const logs = await LogManagement.find()
-      .populate('customerId userId products')
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const totalLogs = await LogManagement.countDocuments();
+    const { totalLogs, logs } = await logService.getAllLogs(page, limit);
 
     res.json({
       totalLogs,
       totalPages: Math.ceil(totalLogs / limit),
-      currentPage: parseInt(page),
+      currentPage: page,
       logs,
     });
   } catch (error) {
@@ -45,42 +29,60 @@ exports.getAllLogs = async (req, res) => {
   }
 };
 
-// Get logs by customer ID
 exports.getLogsByCustomer = async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const customerId = req.params.customerId;
-    const logs = await LogManagement.find({ customerId })
-      .populate('customerId userId products')
-      .sort({ timestamp: -1 });
-    res.json(logs);
+
+    const { totalCustomer, logs } = await logService.getLogsByCustomer(customerId, page, limit);
+
+    res.json({
+      totalCustomer,
+      totalPages: Math.ceil(totalCustomer / limit),
+      currentPage: page,
+      logs,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// Get logs by product ID
 exports.getLogsByProduct = async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const productId = req.params.productId;
-    const logs = await LogManagement.find({ products: productId })
-      .populate('customerId userId products')
-      .sort({ timestamp: -1 });
-    res.json(logs);
+
+    const { totalProducts, logs } = await logService.getLogsByProduct(productId, page, limit);
+
+    res.json({
+      totalProducts,
+      totalPages: Math.ceil(totalProducts / limit),
+      currentPage: page,
+      logs,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// Get logs by user (technician) ID
 exports.getLogsByUser = async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const userId = req.params.userId;
-    const logs = await LogManagement.find({ userId })
-      .populate('customerId userId products')
-      .sort({ timestamp: -1 });
-    res.json(logs);
+
+    const { totalUsers, logs } = await logService.getLogsByUser(userId, page, limit);
+
+    res.json({
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: page,
+      logs,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
