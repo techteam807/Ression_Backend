@@ -180,12 +180,35 @@ const getAllcustomers = async (search, page, limit) => {
   };
 };
 
+// const getCustomerBycode = async (customer_code) => {
+//   return await Customer.findOne({ contact_number: customer_code }).populate({
+//     path: "products",
+//     select: "productCode resinType productStatus",
+//   });
+// };
+
 const getCustomerBycode = async (customer_code) => {
-  return await Customer.findOne({ contact_number: customer_code }).populate({
+  const customer = await Customer.findOne({ contact_number: customer_code }).populate({
     path: "products",
     select: "productCode resinType productStatus",
   });
+
+  if (!customer) return null;
+
+  // Extract cartridgeNum from cf_cartridge_size
+  const extractThirdNumber = (size) => {
+    const matches = size?.match(/\d+/g); // Extract all numbers from the string
+    return matches && matches.length >= 3 ? parseInt(matches[2], 10) : 1; // Get third number
+  };
+
+  const customerData = customer.toObject();
+  
+  // Add cartridgeNum to the response
+  customerData.cartridgeNum = extractThirdNumber(customerData.cf_cartridge_size);
+
+  return customerData;
 };
+
 
 // const replaceCustomersProductsOld = async (customer_code) => {
 //   const Customer = await getCustomerBycode(customer_code);
@@ -334,7 +357,7 @@ const manageCustomerAndProductOLd = async (customer_code, product_code) => {
   };
 };
 
-const manageCustomerAndProduct = async (customer_code, product_code) => {
+const manageCustomerAndProductOne = async (customer_code, product_code) => {
 
   //customer_code
   if(customer_code && product_code)
@@ -366,7 +389,7 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
     if(!ProductS)
       {
         return {
-          error:  new Error(`Product Not Found With Code : ${customer_code}`),
+          error:  new Error(`Product Not Found With Code : ${product_code}`),
           statusCode: 404,
         };
       }
@@ -408,6 +431,119 @@ const manageCustomerAndProduct = async (customer_code, product_code) => {
       return {Customer};
   }
 };
+
+const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
+  let messages = [];
+  let success = false;
+
+  const Customers = await Customer.findOne({contact_number:customer_code});
+  const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
+
+  if (!Customers) {
+    return { success: false, message: `Customer not found with code: ${customer_code}`};
+  }
+
+  Customers.products = Customers.products || [];
+
+  // Validate Products
+  const foundProductCodes = ProductS.map((p) => p.productCode);
+  const missingProductCodes = Product_Codes.filter(
+    (code) => !foundProductCodes.includes(code)
+  );
+
+  if (missingProductCodes.length > 0) {
+    messages.push(
+      `Product Not Found With Code : ${missingProductCodes.join(", ")}`
+    );
+  }
+
+  const DeletedProducts = [];
+  const InUseProducts = [];
+  const ExhaustedProducts = [];
+  const NewProducts = [];
+
+  ProductS.forEach((product) => {
+    if (product.isActive) {
+      if (product.productStatus === ProductEnum.EXHAUSTED) {
+        ExhaustedProducts.push(product);
+      } else if (product.productStatus === ProductEnum.IN_USE) {
+        InUseProducts.push(product);
+      } else if (product.productStatus === ProductEnum.NEW) {
+        NewProducts.push(product);
+      }
+    } else {
+      DeletedProducts.push(product);
+    }
+  });
+
+  // Extract product codes
+  const ExhaustedProductCodes = ExhaustedProducts.map((p) => p.productCode);
+  const NewProductCodes = NewProducts.map((p) => p.productCode);
+  const InUseProductCodes = InUseProducts.map((p) => p.productCode);
+  const DeletedProductCodes = DeletedProducts.map((p) => p.productCode);
+  const NotFoundProductCodes = missingProductCodes;
+
+  if (ExhaustedProducts.length > 0) {
+    messages.push(
+      `Product Status Found Exhausted With Codes: ${ExhaustedProductCodes.join(
+        ", "
+      )}`
+    );
+  }
+  if (InUseProducts.length > 0) {
+    messages.push(
+      `Product Status Found In Use With Codes : ${InUseProductCodes.join(", ")}`
+    );
+  }
+  if (DeletedProductCodes.length > 0) {
+    messages.push(`Product Not Active With Codes : ${DeletedProductCodes.join(", ")}`);
+  }
+
+  if (
+    NewProducts.length > 0 &&
+    ExhaustedProductCodes.length === 0 &&
+    InUseProductCodes.length === 0 &&
+    DeletedProductCodes.length === 0 &&
+    NotFoundProductCodes.length === 0
+  ) {
+    // Remove existing products from customer and update their status
+    if (Customers.products.length > 0) {
+      await Product.updateMany(
+        { _id: { $in: Customers.products } },
+        { productStatus: ProductEnum.EXHAUSTED }
+      );
+      Customers.products = [];
+      await Customers.save();
+    }
+
+    // Attach new products and update their status
+    Customers.products = NewProducts.map((p) => p._id);
+    await Customers.save();
+
+    await Product.updateMany(
+      { productCode: { $in: NewProductCodes } },
+      { productStatus: ProductEnum.IN_USE }
+    );
+
+    messages.push(
+      `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
+    );
+    success = true;
+  }
+
+  return {
+    success,
+    message: messages,
+    ProductCodes: {
+      notFound: NotFoundProductCodes.join(", "),
+      exhausted: ExhaustedProductCodes.join(", "),
+      inUse: InUseProductCodes.join(", "),
+      deleted: DeletedProductCodes.join(", "),
+    },
+    Customer: Customers,
+  };
+};
+
 
 module.exports = {
   getAccessToken,

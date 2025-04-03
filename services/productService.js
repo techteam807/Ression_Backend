@@ -206,10 +206,12 @@ const associateProductWithCustomer = async (customerId, productId) => {
     }
 
     return {
-      insertedCount: insertedProducts.length,
-      duplicateCount: duplicateProductCodes.length,
-      duplicateProductCodes,
-      addedProducts,
+      message:{
+        insertedCount: insertedProducts.length,
+        duplicateCount: duplicateProductCodes.length,
+        duplicateProductCodes,
+        addedProducts,
+      }
     };
   };
 
