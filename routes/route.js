@@ -6,11 +6,15 @@ const ProductRoutes = require('./productRoute');
 const CustomerRoutes = require('./customerRoutes');
 const UserRoutes = require('./userRoutes');
 const WareHouseRoutes = require('./wareHouseRoutes');
+const SuperAdmin = require('./superAdminRoute');
+const logsManagement = require('./logsManagementRoutes');
 
 //allow to use your route files
 router.use('/customers',CustomerRoutes);
 router.use('/products',ProductRoutes);
 router.use('/users',UserRoutes);
 router.use('/wareHouse',WareHouseRoutes);
+router.use('/admin',SuperAdmin)
+router.use('/logsManagement',logsManagement);
 
 module.exports = router;

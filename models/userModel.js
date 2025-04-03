@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { UserEnum } = require('../config/global');
 
 const UserSchema = new mongoose.Schema(
   {
@@ -24,7 +25,7 @@ const UserSchema = new mongoose.Schema(
     },
     user_status: {
         type: String,
-        default: "pending", // approve , delete
+        default: UserEnum.PENDING, // approve , delete
     },
   },
   { timestamps: true }

@@ -193,7 +193,8 @@ const uploadProducts = async (req, res) => {
     }
     else
     {
-      return successResponse(res, `${result.insertedCount} Product Are Added SuccessFully & ${result.duplicateCount} Product Code ${result.duplicateProductCodes} Are Exists`)
+      // return successResponse(res, `${result.insertedCount} Product Are Added SuccessFully & ${result.duplicateCount} Product Code ${result.duplicateProductCodes} Are Exists`)
+      return successResponse(res, result.message,null,null)
     }
 
   } catch (error) {

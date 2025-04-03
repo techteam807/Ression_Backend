@@ -1,0 +1,283 @@
+const getUsers1 = async (user_status) => {
+  const status = user_status ? { user_status } : {};
+  return await User.find(status);
+};
+
+const signUpUserOld = async (userData,res) => {
+//   const existingUser = await User.findOne({
+//     mobile_number: userData.mobile_number,
+//   });
+
+//   if (existingUser) {
+//     throw new Error("User already exists");
+//   }
+
+//   return await User.create(userData);
+
+let user = await User.findOne({ mobile_number:userData.mobile_number });
+console.log(":",user)
+if (user) {
+    if (user.user_status === "deleted") {
+      throw new Error("This user is deleted. Please contact support.");
+    }
+    if (!user.verified) {
+      user.user_name = userData.user_name;
+      await user.save();
+    } else {
+      throw new Error("User is already registered and verified, please login");
+    }
+  } else {
+    user = await User.create({
+      user_name:userData.user_name,
+      mobile_number:userData.mobile_number,
+      verified: false,
+    });
+  }
+
+  if (userData.mobile_number === "+919999999999") {
+    return res.status(200).json({
+        status: true,
+        message: "User registered successfully. Use OTP 123456 to verify.",
+    });
+}
+
+   if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 2 * 60 * 1000) {
+    return res.status(400).json({
+        status: false,
+        message: "Please wait at least 2 minutes before requesting another OTP.",
+    });
+}
+
+lastOtpRequest[user._id] = Date.now();
+
+const otp = Math.floor(100000 + Math.random() * 900000);
+const expiration = new Date(Date.now() + 2 * 60 * 1000); 
+
+const countryCode = userData.mobile_number.slice(0, 3);
+const phoneNumber = userData.mobile_number.slice(3);
+
+await axios.post(interaktUrl, {
+    countryCode: countryCode,
+    phoneNumber: phoneNumber,
+    callbackData: "OTP",
+    type: "Template",
+    template: {
+        name: "doshion_app",
+        languageCode: "en",
+        bodyValues: [otp.toString()],
+        buttonValues: {
+            "0": [otp.toString()]
+        }
+    }
+}, {
+    headers: {
+        Authorization: `Basic ${interaktApiKey}`,
+        "Content-Type": "application/json"
+    }
+});
+
+        // Save the OTP in the Otp collection
+        const otpRecord = await Otp.create({
+            userId: user._id,
+            otp: otp.toString(),
+            expiration: expiration,
+        });
+
+        setTimeout(async () => {
+            await Otp.deleteOne({ _id: otpRecord._id });
+            console.log("OTP expired and removed from database");
+        }, 2 * 60 * 1000);
+};
+
+const signUpUserOld = async (userData,res) => {
+//   const existingUser = await User.findOne({
+//     mobile_number: userData.mobile_number,
+//   });
+
+//   if (existingUser) {
+//     throw new Error("User already exists");
+//   }
+
+//   return await User.create(userData);
+
+let user = await User.findOne({ mobile_number:userData.mobile_number });
+console.log(":",user)
+if (user) {
+    if (user.user_status === "deleted") {
+      throw new Error("This user is deleted. Please contact support.");
+    }
+    if (!user.verified) {
+      user.user_name = userData.user_name;
+      await user.save();
+    } else {
+      throw new Error("User is already registered and verified, please login");
+    }
+  } else {
+    user = await User.create({
+      user_name:userData.user_name,
+      mobile_number:userData.mobile_number,
+      verified: false,
+    });
+  }
+
+  if (userData.mobile_number === "+919999999999") {
+    return res.status(200).json({
+        status: true,
+        message: "User registered successfully. Use OTP 123456 to verify.",
+    });
+}
+
+   if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 2 * 60 * 1000) {
+    return res.status(400).json({
+        status: false,
+        message: "Please wait at least 2 minutes before requesting another OTP.",
+    });
+}
+
+lastOtpRequest[user._id] = Date.now();
+
+const otp = Math.floor(100000 + Math.random() * 900000);
+const expiration = new Date(Date.now() + 2 * 60 * 1000); 
+
+const countryCode = userData.mobile_number.slice(0, 3);
+const phoneNumber = userData.mobile_number.slice(3);
+
+await axios.post(interaktUrl, {
+    countryCode: countryCode,
+    phoneNumber: phoneNumber,
+    callbackData: "OTP",
+    type: "Template",
+    template: {
+        name: "doshion_app",
+        languageCode: "en",
+        bodyValues: [otp.toString()],
+        buttonValues: {
+            "0": [otp.toString()]
+        }
+    }
+}, {
+    headers: {
+        Authorization: `Basic ${interaktApiKey}`,
+        "Content-Type": "application/json"
+    }
+});
+
+        // Save the OTP in the Otp collection
+        const otpRecord = await Otp.create({
+            userId: user._id,
+            otp: otp.toString(),
+            expiration: expiration,
+        });
+
+        setTimeout(async () => {
+            await Otp.deleteOne({ _id: otpRecord._id });
+            console.log("OTP expired and removed from database");
+        }, 2 * 60 * 1000);
+};
+
+const signInUserold = async (mobile_number,res) => {
+//   const user = await User.findOne({ mobile_number });
+//   if (!user) {
+//     throw new Error("User not found");
+//   }
+//   return user;
+
+let user = await User.findOne({ mobile_number });
+
+if (!user) {
+    return res.status(404).json({
+      status: false,
+      message: "User not found",
+    });
+  }
+
+  if (user.user_status === "deleted") {
+    return res.status(400).json({
+        status: false,
+        message: "This user is deleted. Please contact support.",
+    });
+}
+
+if (user.user_status !== "approve") {
+    return res.status(400).json({
+      status: false,
+      message: "Your account has not been approved yet.",
+    });
+  }
+
+  if (mobile_number === "+919999999999") {
+    return res.status(200).json({
+      status: true,
+      message: "OTP sent to your mobile number. Use OTP 123456 to login.",
+    });
+  }
+
+  if (
+    lastOtpRequest[user._id] &&
+    Date.now() - lastOtpRequest[user._id] < 2 * 60 * 1000
+  ) {
+    return res.status(400).json({
+      status: false,
+      message:
+        "Please wait at least 2 minutes before requesting another OTP.",
+    });
+  }
+
+  lastOtpRequest[user._id] = Date.now();
+
+  // Generate a 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  const expiration = new Date(Date.now() + 2 * 60 * 1000); // OTP expires in 2 minutes
+
+  const countryCode = mobile_number.slice(0, 3);
+  const phoneNumber = mobile_number.slice(3);
+
+  await axios.post(
+    interaktUrl,
+    {
+      countryCode: countryCode,
+      phoneNumber: phoneNumber,
+      callbackData: "OTP",
+      type: "Template",
+      template: {
+        name: "doshion_app",
+        languageCode: "en",
+        bodyValues: [otp.toString()],
+        buttonValues: {
+          0: [otp.toString()],
+        },
+      },
+    },
+    {
+      headers: {
+        Authorization: `Basic ${interaktApiKey}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const otpRecord = await Otp.create({
+    userId: user._id,
+    otp: otp.toString(),
+    expiration: expiration,
+  });
+
+  // Set a timeout to delete the OTP after 2 minutes
+  setTimeout(async () => {
+    await Otp.deleteOne({ _id: otpRecord._id });
+    console.log("OTP expired and removed from database");
+  }, 2 * 60 * 1000);
+  
+};
+
+// await axios.post(
+  //   interaktUrl,
+  //   {
+  //     countryCode: country_code,
+  //     phoneNumber: mobile_number,
+  //     callbackData: "OTP",
+  //     type: "Template",
+  //     template: { name: "doshion_app", languageCode: "en", bodyValues: [otp.toString()], buttonValues: { 0: [otp.toString()] } },
+  //   },
+  //   { headers: { Authorization: `Basic ${interaktApiKey}`, "Content-Type": "application/json" } }
+  // );
