@@ -2,7 +2,7 @@
 
 const express = require("express");
 const router = express.Router();
-const logManagementController = require("../controllers/logManagementController");
+const logManagementController = require("../controllers/logsManagementController");
 
 router.post("/logs", logManagementController.createLog);
 
