@@ -169,6 +169,7 @@ const getAllcustomers = async (search, page, limit) => {
   };
 
   const customers = await Customer.find(filter)
+  .select("_id display_name contact_number")
     .skip(options.skip)
     .limit(options.limit);
   const totalRecords = await Customer.countDocuments(filter);

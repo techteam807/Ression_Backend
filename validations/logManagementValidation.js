@@ -21,6 +21,8 @@ const logValidationSchema = Joi.object({
 const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).default(10),
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().optional(),
 });
 
 const validateLog = (req, res, next) => {
