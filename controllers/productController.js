@@ -189,7 +189,7 @@ const uploadProducts = async (req, res) => {
 
     if(result.duplicateCount === 0)
     {
-      return successResponse(res, "Products added successfully", null, result.addedProducts);
+      return successResponse(res, result.message, null, null);
     }
     else
     {

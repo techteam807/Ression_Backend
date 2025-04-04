@@ -205,12 +205,14 @@ const associateProductWithCustomer = async (customerId, productId) => {
       addedProducts.push(AddedProducts);
     }
 
+    const insertedProductCodes = insertedProducts.map((p) => p.productCode) 
+
     return {
       message:{
         insertedCount: insertedProducts.length,
         duplicateCount: duplicateProductCodes.length,
         duplicateProductCodes,
-        addedProducts,
+        insertedProductCodes,
       }
     };
   };
