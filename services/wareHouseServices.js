@@ -1,7 +1,8 @@
 const { ProductEnum } = require("../config/global");
 const WareHouseS = require("../models/wareHouseModel");
 const Product = require("../models/productModel");
-const ProductService = require("../services/productService")
+const ProductService = require("../services/productService");
+const Log = require("../services/logManagementService");
 
 const getWareHouses = async(filter = {}, search) => {
     if(search) {
@@ -127,7 +128,7 @@ const scanMultipleProductsOLd = async (Product_Codes,wareHouse_code) => {
     };
 };
 
-const scanMultipleProducts = async (Product_Codes,wareHouse_code) => {
+const scanMultipleProducts = async (Product_Codes, wareHouse_code, userId) => {
     let messages = [];
     let success = false;
 
@@ -138,6 +139,11 @@ const scanMultipleProducts = async (Product_Codes,wareHouse_code) => {
     {
         return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
     }
+
+    if(!userId)
+        {
+            return { success: false, message: `UserId required` };
+        }
 
     //Fetch Products
     const Products = await ProductService.getMultipleProductByCode(Product_Codes);
@@ -217,6 +223,14 @@ const scanMultipleProducts = async (Product_Codes,wareHouse_code) => {
             { _id: { $in: ExhaustedProductIds } },
             { $set: { productStatus: ProductEnum.NEW, isActive: true } }
         );
+
+        const genrateLogForNew = {
+              products:ExhaustedProducts.map((p) => p.id),
+              userId:userId,
+              status:ProductEnum.NEW,
+            }
+        
+        await Log.createLog(genrateLogForNew);
 
         messages.push(`Product status updated to NEW for: ${ExhaustedProductCodes}`);
         success = true;

@@ -40,8 +40,9 @@ const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
-
+const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
+const { default: mongoose } = require("mongoose");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -432,7 +433,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes, userId) => {
   let messages = [];
   let success = false;
 
@@ -443,7 +444,11 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
     return { success: false, message: `Customer not found with code: ${customer_code}`};
   }
 
-  Customers.products = Customers.products || [];
+  if (!userId) {
+    return { success: false, message: `userId required`};
+  }
+
+  const customerEXHAUSTEDId = Customers.products;
 
   // Validate Products
   const foundProductCodes = ProductS.map((p) => p.productCode);
@@ -499,6 +504,12 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
     messages.push(`Product Not Active With Codes : ${DeletedProductCodes.join(", ")}`);
   }
 
+  const ProductIds = ProductS.map((p) => p.id);
+  console.log("p:",ProductIds)
+
+  const CustomerId = Customers.id;
+  console.log("c",CustomerId);
+  
   if (
     NewProducts.length > 0 &&
     ExhaustedProductCodes.length === 0 &&
@@ -513,7 +524,16 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
         { productStatus: ProductEnum.EXHAUSTED }
       );
       Customers.products = [];
+
       await Customers.save();
+
+      const genrateLogForEXHAUSTED = {
+        customerId:CustomerId,
+        products:customerEXHAUSTEDId,
+        userId:userId,
+        status:ProductEnum.EXHAUSTED,
+      }
+      await Log.createLog(genrateLogForEXHAUSTED)
     }
 
     // Attach new products and update their status
@@ -524,6 +544,15 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
       { productCode: { $in: NewProductCodes } },
       { productStatus: ProductEnum.IN_USE }
     );
+
+    const genrateLogForIN_USE = {
+      customerId:CustomerId,
+      products:NewProducts.map((p) => p.id),
+      userId:userId,
+      status:ProductEnum.IN_USE,
+    }
+
+    await Log.createLog(genrateLogForIN_USE)
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
