@@ -131,13 +131,13 @@ const ManageCustomerAndProductsone = async(req, res) => {
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes,  } = req.body;
+    const { customer_code, Product_Codes,userId  } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes);
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId);
 
     if (result.success) {
       return successResponse(res, result.message, null, null);

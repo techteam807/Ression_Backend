@@ -1,6 +1,17 @@
 const { successResponse, errorResponse } = require("../config/response");
 const productService = require("../services/productService");
 
+const getProd = async (req, res) => {
+  try {
+    const filter = { ...req.query };
+    const products = await productService.getPro(filter);
+
+    return successResponse(res, "Products fetched successfully", null, products);
+  } catch (error) {
+    return errorResponse(res, "Error fetching products", 500, error.message);
+  }
+};
+
 const getProductOLd = async (req, res) => {
   try {
     const { active, search, page = 1, limit = 10 } = req.query;
@@ -212,4 +223,5 @@ module.exports = {
   getCustomerProducts,
   getProductByCode,
   uploadProducts,
+  getProd
 };
