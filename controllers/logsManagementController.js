@@ -51,18 +51,36 @@ exports.getLogsByCustomer = async (req, res) => {
   }
 };
 
+// exports.getLogsByProduct = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page, 10) || 1;
+//     const limit = parseInt(req.query.limit, 10) || 10;
+//     const productId = req.params.productId;
+//     const { startDate, endDate } = req.query;
+
+//     const { totalProducts, logs } = await logService.getLogsByProduct(productId, page, limit, startDate, endDate);
+
+//     res.json({
+//       totalProducts,
+//       totalPages: Math.ceil(totalProducts / limit),
+//       currentPage: page,
+//       logs,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
 exports.getLogsByProduct = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
     const productId = req.params.productId;
+    const { startDate, endDate } = req.query;
 
-    const { totalProducts, logs } = await logService.getLogsByProduct(productId, page, limit);
+    const { total, logs } = await logService.getLogsByProduct(productId, startDate, endDate);
 
     res.json({
-      totalProducts,
-      totalPages: Math.ceil(totalProducts / limit),
-      currentPage: page,
+      total,
       logs,
     });
   } catch (error) {
@@ -70,6 +88,7 @@ exports.getLogsByProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.getLogsByUser = async (req, res) => {
   try {
