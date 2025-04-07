@@ -9,11 +9,11 @@ exports.getAllLogs = async (page, limit, startDate, endDate) => {
 
     const filter = {};
     if (startDate && endDate) {
-        filter.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        filter.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate).setHours(23, 59, 59, 999) };
     } else if (startDate) {
         filter.timestamp = { $gte: new Date(startDate) };
     } else if (endDate) {
-        filter.timestamp = { $lte: new Date(endDate) };
+        filter.timestamp = { $lte: new Date(endDate).setHours(23, 59, 59, 999) };
     }
 
     const logs = await LogManagement.find(filter)
@@ -46,21 +46,62 @@ exports.getLogsByCustomer = async (customerId, page, limit) => {
     return { totalCustomer, logs };
 };
 
-exports.getLogsByProduct = async (productId, page, limit) => {
-    const skip = (page - 1) * limit;
+// exports.getLogsByProduct = async (productId, page, limit, startDate, endDate) => {
+//     const skip = (page - 1) * limit;
 
-    const logs = await LogManagement.find({ products: productId })
+//     const filter = {
+//         products: productId,
+//     };
+
+//     if (startDate && endDate) {
+//         filter.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate).setHours(23, 59, 59, 999) };
+//     } else if (startDate) {
+//         filter.timestamp = { $gte: new Date(startDate) };
+//     } else if (endDate) {
+//         filter.timestamp = { $lte: new Date(endDate).setHours(23, 59, 59, 999) };
+//     }
+
+//     const logs = await LogManagement.find(filter)
+//         .populate({ path: "customerId", select: "display_name contact_number email mobile" })
+//         .populate({ path: "userId", select: "user_name mobile_number" })
+//         .populate({ path: "products", select: "productCode" })
+//         .sort({ timestamp: -1 })
+//         .skip(skip)
+//         .limit(limit);
+
+//     const totalProducts = await LogManagement.countDocuments(filter);
+
+//     return { totalProducts, logs };
+// };
+
+exports.getLogsByProduct = async (productId, startDate, endDate) => {
+    const filter = {
+        products: productId,
+    };
+
+    if (startDate && endDate) {
+        filter.timestamp = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate).setHours(23, 59, 59, 999),
+        };
+    } else if (startDate) {
+        filter.timestamp = { $gte: new Date(startDate) };
+    } else if (endDate) {
+        filter.timestamp = {
+            $lte: new Date(endDate).setHours(23, 59, 59, 999),
+        };
+    }
+
+    const logs = await LogManagement.find(filter)
         .populate({ path: "customerId", select: "display_name contact_number email mobile" })
         .populate({ path: "userId", select: "user_name mobile_number" })
         .populate({ path: "products", select: "productCode" })
-        .sort({ timestamp: -1 })
-        .skip(skip)
-        .limit(limit);
+        .sort({ timestamp: -1 });
 
-    const totalProducts = await LogManagement.countDocuments({ products: productId });
-
-    return { totalProducts, logs };
+    return { total: logs.length, logs };
 };
+
+
 
 exports.getLogsByUser = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
