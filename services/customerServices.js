@@ -42,7 +42,7 @@ const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
-const { default: mongoose } = require("mongoose");
+const request = require("request");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -69,7 +69,8 @@ const getAccessToken = async () => {
   }
 };
 
-const fetchAndStoreCustomers1 = async (accessToken) => {
+//refresh customer
+const fetchAndStoreCustomers1_Old = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -107,6 +108,89 @@ const fetchAndStoreCustomers1 = async (accessToken) => {
   }
 };
 
+const fetchAndStoreCustomers1 = async (accessToken) => {
+  try {
+    const response = await axios.get(ZOHO_API_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.data || !response.data.customers) {
+      throw new Error("Invalid response from Zoho API");
+    }
+
+    const zohoCustomers = response.data.customers;
+    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id);
+
+    const existingCustomers = await Customer.find(
+      { customer_id: { $in: zohoCustomerIds } }
+    );
+
+    const existingCustomerMap = new Map(
+      existingCustomers.map((c) => [c.customer_id, c.toObject()])
+    );
+
+    const newCustomers = [];
+    const updates = [];
+
+    const fieldsToCompare = [
+      "display_name",
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "mobile",
+      "contact_number",
+    ];
+
+    for (const zohoCustomer of zohoCustomers) {
+      const existing = existingCustomerMap.get(zohoCustomer.customer_id);
+
+      if (!existing) {
+        newCustomers.push(zohoCustomer);
+      } else {
+        let hasChanges = false;
+
+        for (const field of fieldsToCompare) {
+          const newValue = zohoCustomer[field] ?? null;
+          const oldValue = existing[field] ?? null;
+
+          if (newValue !== oldValue) {
+            hasChanges = true;
+            break;
+          }
+        }
+
+        if (hasChanges) {
+          updates.push({
+            updateOne: {
+              filter: { customer_id: zohoCustomer.customer_id },
+              update: { $set: zohoCustomer },
+            },
+          });
+        }
+      }
+    }
+
+    if (newCustomers.length > 0) {
+      await Customer.insertMany(newCustomers);
+    }
+
+    if (updates.length > 0) {
+      await Customer.bulkWrite(updates);
+    }
+
+    return {
+      message: "Sync complete",
+      added: newCustomers.length,
+      updated: updates.length,
+    };
+  } catch (error) {
+    console.error("Error in fetchAndStoreCustomers:", error.message);
+    throw error;
+  }
+};
+
+//store with token
 const fetchAndStoreCustomers = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
@@ -169,7 +253,7 @@ const getAllcustomers = async (search, page, limit) => {
   };
 
   const customers = await Customer.find(filter)
-  .select("_id display_name contact_number")
+  // .select("_id display_name contact_number")
     .skip(options.skip)
     .limit(options.limit);
   const totalRecords = await Customer.countDocuments(filter);
@@ -450,7 +534,9 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId) =>
   }
 
   const customerEXHAUSTEDId = Customers.products;
-
+  const rawMobile = Customers.mobile;
+  const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerName = Customers.display_name;
   // Validate Products
   const foundProductCodes = ProductS.map((p) => p.productCode);
   const missingProductCodes = Product_Codes.filter(
@@ -554,6 +640,7 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId) =>
     }
 
     await Log.createLog(genrateLogForIN_USE)
+    await sendWhatsAppMsg(cutomerMobileNumber,customerName)
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
@@ -572,6 +659,45 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId) =>
     },
     Customer: Customers,
   };
+};
+
+const sendWhatsAppMsg = async (mobile_number, name) => {
+  console.log(mobile_number,name);
+  return new Promise((resolve, reject) => {
+    const options = {
+      method: "POST",
+      url: process.env.GALLABOX_URL,
+      headers: {
+        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
+        apikey: process.env.GALLABOX_API_KEY, // lowercase
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channelId: process.env.GALLABOX_CHANNEL_ID,
+        channelType: "whatsapp",
+        recipient: {
+          name: mobile_number,
+          phone: `91${mobile_number}`,
+        },
+        whatsapp: {
+          type: "template",
+          template: {
+            templateName: "bw_scan_app_utility2",
+            bodyValues: { name: name }, // Change from object to array
+          },
+        },
+      }),
+    };
+
+    request(options, (error, response) => {
+      if (error) {
+        console.error("Error sending WhatsApp Msg:", error);
+        return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
+      }
+      console.log("WhatsApp Message Sent:", response.body);
+      resolve({ success: true, message: "Msg sent successfully." });
+    });
+  });
 };
 
 
