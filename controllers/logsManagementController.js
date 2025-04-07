@@ -14,8 +14,9 @@ exports.getAllLogs = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
+    const { startDate, endDate } = req.query;
 
-    const { totalLogs, logs } = await logService.getAllLogs(page, limit);
+    const { totalLogs, logs } = await logService.getAllLogs(page, limit, startDate, endDate);
 
     res.json({
       totalLogs,
@@ -28,6 +29,7 @@ exports.getAllLogs = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.getLogsByCustomer = async (req, res) => {
   try {

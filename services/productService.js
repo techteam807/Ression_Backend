@@ -3,9 +3,15 @@ const ProductS = require("../models/productModel");
 const Customer = require("../models/customerModel");
 const { ProductEnum } = require("../config/global");
 
-// const getAllProducts = async (filter ={}) => {
-//   return await Product.find(filter);
-// };
+const getPro = async (filter) => {
+  try {
+    return await ProductS.find(filter)
+    .select("_id productCode").lean();
+    
+  } catch (error) {
+    throw new Error("Error fetching products: ", error.message);
+  }
+};
 
 const formatAdapterSize = (size) => {
   if (!size) return size;
@@ -217,4 +223,4 @@ const associateProductWithCustomer = async (customerId, productId) => {
     };
   };
 
-module.exports = { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode, uploadProducts };
+module.exports = { getPro, getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode, uploadProducts };
