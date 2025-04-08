@@ -83,7 +83,7 @@ const deleteWareHouses = async (req, res) => {
 
 const scanMultipleProductsByCode = async (req, res) => {
   try {
-    const { Product_Codes, wareHouse_code, userId } = req.body;
+    const { Product_Codes, wareHouse_code} = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
@@ -91,8 +91,7 @@ const scanMultipleProductsByCode = async (req, res) => {
 
     const result = await WareHouseService.scanMultipleProducts(
       Product_Codes,
-      wareHouse_code,
-      userId
+      wareHouse_code
     );
 
     if (result.success) {
