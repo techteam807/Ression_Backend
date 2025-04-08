@@ -70,45 +70,7 @@ const getCustomerByCode = async (req, res) => {
   }
 };
 
-// const ReplaceProductsOld = async (req, res) => {
-//   try {
-
-//     const {customer_code} = req.query;
-
-//     const result = await replaceCustomersProductsOld(customer_code);
-
-//     if (result.error) {
-//       return errorResponse(res, result.error, result.statusCode);
-//     }
-
-//     successResponse(res, "Customer Products Managed successfully", null, result);
-//   } catch (error) {
-//     errorResponse(res, "Error Managing customer Products", 500, error);
-// }
-// };
-
-// const ReplaceProductsNew = async (req, res) => {
-//   try {
-
-//     const {customer_code} = req.query;
-//     const { newProductId } = req.body;
-
-//     // if (!newProductId) {
-//     //   return errorResponse(res, "New product ID is required", 400);
-//     // }
-
-//     const result = await replaceCustomersProductsNew(customer_code,newProductId);
-
-//     if (result.error) {
-//       return errorResponse(res, result.error, result.statusCode);
-//     }
-
-//     successResponse(res, "Customer Products Managed successfully", null, result);
-//   } catch (error) {
-//     errorResponse(res, "Error Managing customer Products",500,error);
-//   }
-// };
-
+//one product
 const ManageCustomerAndProductsone = async(req, res) => {
   try {
 
@@ -128,16 +90,17 @@ const ManageCustomerAndProductsone = async(req, res) => {
 }
 };
 
+//multiple products
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes,  } = req.body;
+    const { customer_code, Product_Codes,userId  } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes);
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId);
 
     if (result.success) {
       return successResponse(res, result.message, null, null);
