@@ -103,6 +103,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       "mobile",
       "contact_number",
       "customer_name",
+      "cf_cartridge_qty",
     ];
 
     for (const zohoCustomer of zohoCustomers) {
@@ -244,16 +245,9 @@ const getCustomerBycode = async (customer_code) => {
 
   if (!customer) return null;
 
-  // Extract cartridgeNum from cf_cartridge_size
-  const extractThirdNumber = (size) => {
-    const matches = size?.match(/\d+/g); // Extract all numbers from the string
-    return matches && matches.length >= 3 ? parseInt(matches[2], 10) : 1; // Get third number
-  };
-
   const customerData = customer.toObject();
   
-  // Add cartridgeNum to the response
-  customerData.cartridgeNum = extractThirdNumber(customerData.cf_cartridge_size);
+  customerData.cartridgeNum = Number(customerData.cf_cartridge_qty);
 
   return customerData;
 };
