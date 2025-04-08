@@ -128,7 +128,7 @@ const scanMultipleProductsOLd = async (Product_Codes,wareHouse_code) => {
     };
 };
 
-const scanMultipleProducts = async (Product_Codes, wareHouse_code) => {
+const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     let messages = [];
     let success = false;
 
@@ -140,10 +140,10 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code) => {
         return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
     }
 
-    // if(!userId)
-    //     {
-    //         return { success: false, message: `UserId required` };
-    //     }
+    if(!userId)
+        {
+            return { success: false, message: `UserId required` };
+        }
 
     //Fetch Products
     const Products = await ProductService.getMultipleProductByCode(Product_Codes);
@@ -224,13 +224,13 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code) => {
             { $set: { productStatus: ProductEnum.NEW, isActive: true } }
         );
 
-        // const genrateLogForNew = {
-        //       products:ExhaustedProducts.map((p) => p.id),
-        //       userId:userId,
-        //       status:ProductEnum.NEW,
-        //     }
+        const genrateLogForNew = {
+              products:ExhaustedProducts.map((p) => p.id),
+              userId:userId,
+              status:ProductEnum.NEW,
+            }
         
-        // await Log.createLog(genrateLogForNew);
+        await Log.createLog(genrateLogForNew);
 
         messages.push(`Product status updated to NEW for: ${ExhaustedProductCodes}`);
         success = true;
