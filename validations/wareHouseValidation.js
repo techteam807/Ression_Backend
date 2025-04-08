@@ -2,8 +2,7 @@ const Joi = require("joi");
 
 const createWareHouse = Joi.object({
     wareHouse_code: Joi.string()
-      // .pattern(/^\d+\.\d+\.\d+\.[A-Za-z]$/)
-      .pattern(/[A-Za-z]{2}-[A-Za-z]{4}-\d+$/)
+      .pattern(/[A-Za-z]{2}-[A-Za-z]{4}-\d+$/) 
       .required()
       .messages({
         "string.empty": "WareHouse code is required",
