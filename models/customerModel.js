@@ -38,6 +38,7 @@ const CustomerSchema = new mongoose.Schema(
     cf_replacement_cycle_days: String,
     cf_replacement_day: String,
     gst_treatment: String,
+    cf_cartridge_qty:{type:String,default:"1"},
     gst_no: String,
     place_of_contact: String,
     payment_terms_label: String,
