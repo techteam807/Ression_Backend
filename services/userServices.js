@@ -381,6 +381,15 @@ const sendWhatsAppOtp = async (mobile_number, otp) => {
   });
 };
 
+const getUserDropdown = async (filter) => {
+  try{
+    return await User.find(filter)
+    .select("_id user_name").lean();
+
+  }catch(error){
+    throw new Error("Error fetching user dropdown data: ", error.message);
+  }
+};
 
 module.exports = {
   getUsers,
@@ -392,5 +401,6 @@ module.exports = {
   deleteUser,
   restoreUser,
   logsOfUser,
-  sendWhatsAppOtp
+  sendWhatsAppOtp,
+  getUserDropdown
 };
