@@ -12,7 +12,7 @@ const createProduct = Joi.object({
     .messages({
       "string.empty": "Product code is required",
       // "string.pattern.base": "Product code must have 4 letters followed by 4 digits (e.g., ABCD1234)",
-      "string.pattern.base":"Product code must follow the format: 0000.00.00.ABCD Upto"
+      "string.pattern.base":"Product code format: 0000.00.00.ABCD"
     }),
   // productDesc: Joi.string().allow(""),
   // connectorType:Joi.string().allow(""),
