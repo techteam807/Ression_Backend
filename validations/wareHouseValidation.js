@@ -5,8 +5,8 @@ const createWareHouse = Joi.object({
       .pattern(/^[A-Za-z]{2}-[A-Za-z]{4}-\d+$/) 
       .required()
       .messages({
-        "string.empty": "WareHouse code is required",
-        "string.pattern.base":"WareHouse code must follow the format: AB-ABCD-01"
+        "string.empty": "Warehouse code is required",
+        "string.pattern.base":"Warehouse code format: AB-ABCD-01"
       }),
   });
 
