@@ -3,8 +3,9 @@ const {
   getAllcustomers,
   getCustomerBycode,
   getAccessToken,
-  fetchAndStoreCustomers1,
-  manageCustomerAndProduct
+  fetchAndStoreCustomersWithRefresh,
+  manageCustomerAndProduct,
+
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
 
@@ -16,7 +17,7 @@ const ZohoCustomers = async (req, res) => {
       return res.status(500).json({ error: "Failed to get access token" });
     }
 
-    const result = await fetchAndStoreCustomers1(accessToken);
+    const result = await fetchAndStoreCustomersWithRefresh(accessToken);
     return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ error: error.message });
