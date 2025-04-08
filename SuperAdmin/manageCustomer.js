@@ -26,10 +26,9 @@ module.exports.manageProductStatus = async (req, res) => {
 
         const product = await Product.findByIdAndUpdate(
             productId,
-            { productStatus },
+            { productStatus, isActive: true },
             { new: true }
         );
-        
 
         if (!product) {
             return errorResponse(res, "Product not found", 404);
