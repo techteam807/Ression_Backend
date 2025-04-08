@@ -1,41 +1,3 @@
-// const axios = require("axios");
-// const Customer = require("../models/usermodel");
-
-// const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers"; // Replace with actual API URL
-
-// const fetchAndStoreCustomers = async (accessToken) => {
-//   try {
-//     // Fetch customer data from Zoho API
-//     const response = await axios.get(ZOHO_API_URL, {
-//       headers: { Authorization: `Bearer ${accessToken}` },
-//     });
-
-//     if (!response.data || !response.data.customers) {
-//       throw new Error("Invalid response from Zoho API");
-//     }
-
-//     const customers = response.data.customers;
-
-//     // Optimize insertion using bulkWrite with upsert
-//     const operations = customers.map((customer) => ({
-//       updateOne: {
-//         filter: { customer_id: customer.customer_id }, // Prevent duplicates
-//         update: { $set: customer },
-//         upsert: true, // Insert if not exists
-//       },
-//     }));
-
-//     await Customer.bulkWrite(operations);
-
-//     return { message: "Customers stored successfully", count: customers.length };
-//   } catch (error) {
-//     console.error("Error in fetchAndStoreCustomers:", error.message);
-//     throw error;
-//   }
-// };
-
-// module.exports = { fetchAndStoreCustomers };
-// import { ProductEnum } from '../config/global';
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
@@ -70,7 +32,7 @@ const getAccessToken = async () => {
 };
 
 //refresh customer
-const fetchAndStoreCustomers1_Old = async (accessToken) => {
+const fetchAndStoreCustomersWithRefreshOld = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -108,7 +70,7 @@ const fetchAndStoreCustomers1_Old = async (accessToken) => {
   }
 };
 
-const fetchAndStoreCustomers1 = async (accessToken) => {
+const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -140,6 +102,7 @@ const fetchAndStoreCustomers1 = async (accessToken) => {
       "phone",
       "mobile",
       "contact_number",
+      "customer_name",
     ];
 
     for (const zohoCustomer of zohoCustomers) {
@@ -266,12 +229,12 @@ const getAllcustomers = async (search, page, limit) => {
   };
 };
 
-// const getCustomerBycode = async (customer_code) => {
-//   return await Customer.findOne({ contact_number: customer_code }).populate({
-//     path: "products",
-//     select: "productCode resinType productStatus",
-//   });
-// };
+const getCustomerBycodeOld = async (customer_code) => {
+  return await Customer.findOne({ contact_number: customer_code }).populate({
+    path: "products",
+    select: "productCode resinType productStatus",
+  });
+};
 
 const getCustomerBycode = async (customer_code) => {
   const customer = await Customer.findOne({ contact_number: customer_code }).populate({
@@ -294,97 +257,6 @@ const getCustomerBycode = async (customer_code) => {
 
   return customerData;
 };
-
-
-// const replaceCustomersProductsOld = async (customer_code) => {
-//   const Customer = await getCustomerBycode(customer_code);
-
-//   if (!Customer) {
-//     return { error: "Customer not found", statusCode: 404 };
-//   }
-
-//   if (!Customer.products || Customer.products.length === 0) {
-//     return { error: "No products found for this customer", statusCode: 404 };
-//   }
-
-//   const alreadyExhausted = Customer.products.every(
-//     (product) => product.resinType === ProductEnum.EXHAUSTED
-//   );
-
-//   if (alreadyExhausted) {
-//     return { message: "All products are already exhausted", statusCode: 200 };
-//   }
-
-//   const ManageProducts = await Promise.all(
-//     Customer.products.map(async (product) => {
-//       return await Product.findByIdAndUpdate(
-//         product._id,
-//         { resinType: ProductEnum.EXHAUSTED },
-//         { new: true }
-//       );
-//     })
-//   );
-
-//   return {
-//     ManageProducts,
-//   };
-// };
-
-// const replaceCustomersProductsNew = async (customer_code, newProductId) => {
-//   const customer = await getCustomerBycode(customer_code);
-
-//   if (!customer) {
-//     return { error: "Customer not found", statusCode: 404 };
-//   }
-
-//   if (!customer.products || customer.products.length === 0) {
-//     return { error: "No products found for this customer", statusCode: 404 };
-//   }
-
-//   const exhaustedProducts = customer.products.filter(
-//     (product) => product.resinType === ProductEnum.EXHAUSTED
-//   );
-
-//   const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
-
-//   customer.products = customer.products.filter(
-//     (product) => product.resinType !== ProductEnum.EXHAUSTED
-//   );
-
-//   await customer.save();
-
-//   const newProduct = await Product.findById(newProductId);
-//   if (!newProduct) {
-//     return { error: "New product not found", statusCode: 404 };
-//   }
-
-//   const productAlreadyExists = customer.products.some(
-//     (product) => product._id.toString() === newProductId.toString()
-//   );
-
-//   if (productAlreadyExists) {
-//     return {
-//       message: "Product already assigned to the customer",
-//       statusCode: 200,
-//     };
-//   }
-
-//   customer.products.push(newProductId);
-//   await customer.save();
-
-//   await Product.updateMany(
-//     { _id: { $in: exhaustedProductIds } },
-//     { resinType: ProductEnum.EXHAUSTED }
-//   );
-
-//   await Product.findByIdAndUpdate(newProductId, {
-//     resinType: ProductEnum.IN_USE,
-//   });
-
-//   return {
-//     customer,
-//   };
-// };
 
 const manageCustomerAndProductOLd = async (customer_code, product_code) => {
   const Customer = await getCustomerBycode(customer_code);
@@ -703,7 +575,7 @@ const sendWhatsAppMsg = async (mobile_number, name) => {
 
 module.exports = {
   getAccessToken,
-  fetchAndStoreCustomers1,
+  fetchAndStoreCustomersWithRefresh,
   fetchAndStoreCustomers,
   getAllcustomers,
   getCustomerBycode,

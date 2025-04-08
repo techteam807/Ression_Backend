@@ -70,45 +70,7 @@ const getCustomerByCode = async (req, res) => {
   }
 };
 
-// const ReplaceProductsOld = async (req, res) => {
-//   try {
-
-//     const {customer_code} = req.query;
-
-//     const result = await replaceCustomersProductsOld(customer_code);
-
-//     if (result.error) {
-//       return errorResponse(res, result.error, result.statusCode);
-//     }
-
-//     successResponse(res, "Customer Products Managed successfully", null, result);
-//   } catch (error) {
-//     errorResponse(res, "Error Managing customer Products", 500, error);
-// }
-// };
-
-// const ReplaceProductsNew = async (req, res) => {
-//   try {
-
-//     const {customer_code} = req.query;
-//     const { newProductId } = req.body;
-
-//     // if (!newProductId) {
-//     //   return errorResponse(res, "New product ID is required", 400);
-//     // }
-
-//     const result = await replaceCustomersProductsNew(customer_code,newProductId);
-
-//     if (result.error) {
-//       return errorResponse(res, result.error, result.statusCode);
-//     }
-
-//     successResponse(res, "Customer Products Managed successfully", null, result);
-//   } catch (error) {
-//     errorResponse(res, "Error Managing customer Products",500,error);
-//   }
-// };
-
+//one product
 const ManageCustomerAndProductsone = async(req, res) => {
   try {
 
@@ -128,6 +90,7 @@ const ManageCustomerAndProductsone = async(req, res) => {
 }
 };
 
+//multiple products
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
