@@ -572,7 +572,6 @@ const sendWhatsAppMsg = async (mobile_number, name) => {
   });
 };
 
-
 module.exports = {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
