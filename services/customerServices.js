@@ -574,6 +574,16 @@ const sendWhatsAppMsg = async (mobile_number, name) => {
   });
 };
 
+const getCustomerDropdown = async (filter) => {
+  try{
+    return await Customer.find(filter)
+    .select("_id display_name contact_number").lean();
+
+  }catch(error){
+    throw new Error("Error in getCustomerDropdown:", error.message);
+  }
+};
+
 module.exports = {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
@@ -583,4 +593,5 @@ module.exports = {
   // replaceCustomersProductsOld,
   // replaceCustomersProductsNew,
   manageCustomerAndProduct,
+  getCustomerDropdown,
 };
