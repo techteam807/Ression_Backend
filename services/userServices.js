@@ -30,6 +30,8 @@ const getUsers = async (user_status, search, page, limit) => {
     filter.user_status = user_status;
   }
 
+    filter.verified = true;
+
   const options = {
     skip: (page - 1) * limit,
     limit: parseInt(limit),
@@ -91,34 +93,8 @@ const signUpUser = async (userData) => {
     return { success: true, message: "User registered successfully. Use OTP 123456 to verify.", statusCode: 200 };
   }
 
-  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 10 * 1000) {
-    return { success: false, message: "Please wait 10 seconds before requesting another OTP.", statusCode: 400 };
-  }
+  return await generateOtp(user, userData.mobile_number);
 
-  lastOtpRequest[user._id] = Date.now();
-
-  await Otp.deleteMany({ userId: user._id });
-
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  const CreatedAt = new Date(Date.now() + 2 * 60 * 1000); // OTP expires in 2 minutes
-
-  const countryCode = userData.country_code;
-  const phoneNumber = userData.mobile_number;
-
-  await sendWhatsAppOtp(phoneNumber,otp);
-
-  const otpRecord = await Otp.create({
-    userId: user._id,
-    otp: otp.toString(),
-    CreatedAt: CreatedAt,
-  });
-
-  setTimeout(async () => {
-    await Otp.deleteOne({ _id: otpRecord._id });
-    console.log("OTP expired and removed from database");
-  }, 2 * 60 * 1000);
-
-  return { success: true, message: "User registered successfully. OTP sent to your mobile number.", statusCode: 200 };
 };
 
 const signInUser = async (mobile_number,country_code) => {
@@ -132,35 +108,22 @@ const signInUser = async (mobile_number,country_code) => {
     return { success: false, message: "This user is deleted. Please contact support.", statusCode: 400 };
   }
 
+  if (!user.verified)
+    {
+      return { success: false, message: "Please verify your account using OTP before login.", statusCode: 400 };
+    }
+
   if (user.user_status !== UserEnum.APPROVE) {
     return { success: false, message: "Your account has not been approved yet.", statusCode: 400 };
   }
+
 
   if (mobile_number === "+919999999999") {
     return { success: true, message: "OTP sent to your mobile number. Use OTP 123456 to login.", statusCode: 200 };
   }
   
+  return await generateOtp(user, mobile_number);
 
-  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 10 * 1000) {
-    return { success: false, message: "Please wait at least 10 second before requesting another OTP.", statusCode: 400 };
-  }
-
-  lastOtpRequest[user._id] = Date.now();
-
-  await Otp.deleteMany({ userId: user._id });
-
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  const CreatedAt = new Date(Date.now() + 2 * 60 * 1000);
-
-  await sendWhatsAppOtp(mobile_number,otp);
-  const otpRecord = await Otp.create({ userId: user._id, otp: otp.toString(), CreatedAt });
-
-  setTimeout(async () => {
-    await Otp.deleteOne({ _id: otpRecord._id });
-    console.log("OTP expired and removed from database");
-  }, 2 * 60 * 1000);
-
-  return { success: true, message: "OTP has been sent to your mobile number.", statusCode: 200 };
 };
 
 const verifyUserRegister = async (mobile_number,country_code, otp) => {
@@ -398,6 +361,29 @@ const sendWhatsAppOtp = async (mobile_number, otp) => {
       resolve({ success: true, message: "OTP sent successfully." });
     });
   });
+};
+
+const generateOtp = async(user,mobile_number) => {
+  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 10 * 1000) {
+    return { success: false, message: "Please wait at least 10 second before requesting another OTP.", statusCode: 400 };
+  }
+
+  lastOtpRequest[user._id] = Date.now();
+
+  await Otp.deleteMany({ userId: user._id });
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  const CreatedAt = new Date(Date.now() + 2 * 60 * 1000);
+
+  await sendWhatsAppOtp(mobile_number,otp);
+  const otpRecord = await Otp.create({ userId: user._id, otp: otp.toString(), CreatedAt });
+
+  setTimeout(async () => {
+    await Otp.deleteOne({ _id: otpRecord._id });
+    console.log("OTP expired and removed from database");
+  }, 2 * 60 * 1000);
+
+  return { success: true, message: "OTP has been sent to your mobile number.", statusCode: 200 };
 };
 
 const getUserDropdown = async (filter) => {
