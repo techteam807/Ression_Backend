@@ -397,5 +397,6 @@ module.exports = {
   deleteUser,
   restoreUser,
   logsOfUser,
-  sendWhatsAppOtp
+  sendWhatsAppOtp,
+  getUserDropdown
 };

@@ -5,6 +5,7 @@ const {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
   manageCustomerAndProduct,
+  getCustomerDropdown,
 
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
@@ -95,13 +96,13 @@ const ManageCustomerAndProductsone = async(req, res) => {
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes } = req.body;
+    const { customer_code, Product_Codes, userId } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes);
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId);
 
     if (result.success) {
       return successResponse(res, result.message, null, null);
@@ -114,5 +115,16 @@ const ManageCustomerAndProducts = async(req, res) => {
 }
 };
 
+const getCustomerdropdown = async (req, res) => {
+  try{
+    const filter = { ...req.query };
+    const customers = await getCustomerDropdown(filter);
 
-module.exports = { storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts };
+    return successResponse(res, "Customers fetched successfully", null, customers);
+  }catch(error){
+    return errorResponse(res, "Error fetching customer dropdown", 500, error);
+  }
+};
+
+
+module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts };
