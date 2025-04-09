@@ -387,6 +387,8 @@ const generateOtp = async(user,mobile_number) => {
 };
 
 const getUserDropdown = async (filter) => {
+  filter.verified = true;
+  filter.user_status = UserEnum.APPROVE;
   try{
     return await User.find(filter)
     .select("_id user_name").lean();
