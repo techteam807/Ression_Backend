@@ -12,18 +12,11 @@ exports.createLog = async (req, res) => {
 
 exports.getAllLogs = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, productId } = req.query;
 
-    const { totalLogs, logs } = await logService.getAllLogs(page, limit, startDate, endDate);
+    const logs = await logService.getAllLogs(startDate, endDate, productId);
 
-    res.json({
-      totalLogs,
-      totalPages: Math.ceil(totalLogs / limit),
-      currentPage: page,
-      logs,
-    });
+    res.json({ logs });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
