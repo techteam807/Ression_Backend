@@ -386,6 +386,15 @@ const generateOtp = async(user,mobile_number) => {
   return { success: true, message: "OTP has been sent to your mobile number.", statusCode: 200 };
 };
 
+const getUserDropdown = async (filter) => {
+  try{
+    return await User.find(filter)
+    .select("_id user_name").lean();
+
+  }catch(error){
+    throw new Error("Error fetching user dropdown data: ", error.message);
+  }
+};
 
 module.exports = {
   getUsers,
