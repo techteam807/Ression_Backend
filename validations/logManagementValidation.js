@@ -37,6 +37,7 @@ const getAllLogsJoiSchema = Joi.object({
     limit: Joi.number().integer().min(1).default(10),
     startDate: Joi.date().iso().optional(),
     endDate: Joi.date().iso().optional(),
+    productId: Joi.string().custom(isValidObjectId, 'ObjectId validation'),
 }).custom((value, helpers) => {
         if (value.startDate && value.endDate && new Date(value.startDate) > new Date(value.endDate)) {
             return helpers.message("startDate must be less than or equal to endDate");
