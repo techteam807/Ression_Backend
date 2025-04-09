@@ -159,6 +159,17 @@ const logsOfUser = async (req, res) => {
   }
 };
 
+const getUserdropdown = async (req, res) => {
+  try {
+    const filter = { ...req.query };
+    const Users = await UserService.getUserDropdown(filter);
+
+    return successResponse(res, "User dropdown get successfully", null, Users);
+  } catch (error) {
+    return errorResponse(res, "Error get User dropdown", 500, error);
+  }
+};
+
 module.exports = {
   getUsers,
   signUpUser,
@@ -169,4 +180,5 @@ module.exports = {
   deleteUser,
   restoreUser,
   logsOfUser,
+  getUserdropdown,
 };

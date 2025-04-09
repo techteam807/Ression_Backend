@@ -384,7 +384,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => {
   let messages = [];
   let success = false;
 
@@ -395,9 +395,9 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
     return { success: false, message: `Customer not found with code: ${customer_code}`};
   }
 
-  // if (!userId) {
-  //   return { success: false, message: `userId required`};
-  // }
+  if (!userId) {
+    return { success: false, message: `userId required`};
+  }
 
   const customerEXHAUSTEDId = Customers.products;
   const rawMobile = Customers.mobile;
@@ -480,13 +480,14 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
 
       await Customers.save();
 
-      // const genrateLogForEXHAUSTED = {
-      //   customerId:CustomerId,
-      //   products:customerEXHAUSTEDId,
-      //   userId:userId,
-      //   status:ProductEnum.EXHAUSTED,
-      // }
-      // await Log.createLog(genrateLogForEXHAUSTED)
+      const genrateLogForEXHAUSTED = {
+        customerId:CustomerId,
+        products:customerEXHAUSTEDId,
+        userId:userId,
+        status:ProductEnum.EXHAUSTED,
+      }
+
+      await Log.createLog(genrateLogForEXHAUSTED)
     }
 
     // Attach new products and update their status
@@ -498,14 +499,15 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes) => {
       { productStatus: ProductEnum.IN_USE }
     );
 
-    // const genrateLogForIN_USE = {
-    //   customerId:CustomerId,
-    //   products:NewProducts.map((p) => p.id),
-    //   userId:userId,
-    //   status:ProductEnum.IN_USE,
-    // }
+    const genrateLogForIN_USE = {
+      customerId:CustomerId,
+      products:NewProducts.map((p) => p.id),
+      userId:userId,
+      status:ProductEnum.IN_USE,
+    }
 
-    // await Log.createLog(genrateLogForIN_USE)
+    await Log.createLog(genrateLogForIN_USE)
+
     await sendWhatsAppMsg(cutomerMobileNumber,customerName)
 
     messages.push(
@@ -566,6 +568,16 @@ const sendWhatsAppMsg = async (mobile_number, name) => {
   });
 };
 
+const getCustomerDropdown = async (filter) => {
+  try{
+    return await Customer.find(filter)
+    .select("_id display_name contact_number").lean();
+
+  }catch(error){
+    throw new Error("Error in getCustomerDropdown:", error.message);
+  }
+};
+
 module.exports = {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
@@ -575,4 +587,5 @@ module.exports = {
   // replaceCustomersProductsOld,
   // replaceCustomersProductsNew,
   manageCustomerAndProduct,
+  getCustomerDropdown,
 };
