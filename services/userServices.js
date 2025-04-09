@@ -56,8 +56,22 @@ const signUpUser = async (userData) => {
 
   if (user) {
     if (user.user_status === UserEnum.DELETE) {
-      return { success: false, message: "This user is deleted. Please contact support.", statusCode: 400 };
+      return {
+        success: false,
+        message: "This user is deleted. Please contact support.",
+        statusCode: 400
+      };
     }
+
+    if (user.user_status === UserEnum.PENDING && user.verified) {
+      return {
+        success: false,
+        message: "Please wait, admin will approve your request.",
+        statusCode: 400
+      };
+    }
+    
+
     if (!user.verified) {
       user.user_name = userData.user_name;
       await user.save();
@@ -77,14 +91,16 @@ const signUpUser = async (userData) => {
     return { success: true, message: "User registered successfully. Use OTP 123456 to verify.", statusCode: 200 };
   }
 
-  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 2 * 60 * 1000) {
-    return { success: false, message: "Please wait at least 2 minutes before requesting another OTP.", statusCode: 400 };
+  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 10 * 1000) {
+    return { success: false, message: "Please wait 10 seconds before requesting another OTP.", statusCode: 400 };
   }
 
   lastOtpRequest[user._id] = Date.now();
 
+  await Otp.deleteMany({ userId: user._id });
+
   const otp = Math.floor(100000 + Math.random() * 900000);
-  const expiration = new Date(Date.now() + 2 * 60 * 1000); // OTP expires in 2 minutes
+  const CreatedAt = new Date(Date.now() + 2 * 60 * 1000); // OTP expires in 2 minutes
 
   const countryCode = userData.country_code;
   const phoneNumber = userData.mobile_number;
@@ -94,7 +110,7 @@ const signUpUser = async (userData) => {
   const otpRecord = await Otp.create({
     userId: user._id,
     otp: otp.toString(),
-    expiration: expiration,
+    CreatedAt: CreatedAt,
   });
 
   setTimeout(async () => {
@@ -124,17 +140,19 @@ const signInUser = async (mobile_number,country_code) => {
     return { success: true, message: "OTP sent to your mobile number. Use OTP 123456 to login.", statusCode: 200 };
   }
 
-  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 2 * 60 * 1000) {
-    return { success: false, message: "Please wait at least 2 minutes before requesting another OTP.", statusCode: 400 };
+  if (lastOtpRequest[user._id] && Date.now() - lastOtpRequest[user._id] < 10 * 1000) {
+    return { success: false, message: "Please wait at least 10 second before requesting another OTP.", statusCode: 400 };
   }
 
   lastOtpRequest[user._id] = Date.now();
 
+  await Otp.deleteMany({ userId: user._id });
+
   const otp = Math.floor(100000 + Math.random() * 900000);
-  const expiration = new Date(Date.now() + 2 * 60 * 1000);
+  const CreatedAt = new Date(Date.now() + 2 * 60 * 1000);
 
   await sendWhatsAppOtp(mobile_number,otp);
-  const otpRecord = await Otp.create({ userId: user._id, otp: otp.toString(), expiration });
+  const otpRecord = await Otp.create({ userId: user._id, otp: otp.toString(), CreatedAt });
 
   setTimeout(async () => {
     await Otp.deleteOne({ _id: otpRecord._id });
@@ -162,7 +180,7 @@ const verifyUserRegister = async (mobile_number,country_code, otp) => {
   const otpRecord = await Otp.findOne({
     userId: user._id,
     otp,
-    expiration: { $gt: Date.now() },
+    CreatedAt: { $gt: Date.now() },
   });
 
   if (!otpRecord) {
@@ -190,7 +208,7 @@ const verifyUserLogin = async (mobile_number,country_code, otp) => {
 
   // Hardcoded Admin Login (For Testing Purposes)
   if (mobile_number === "+919999999999" && otp === "123456") {
-    // Generate a JWT token with a 1-day expiration
+    // Generate a JWT token with a 1-day CreatedAt
     const token = jwt.sign({ userId: user._id, mobile_number }, jwtSecret, {
       expiresIn: "1d",
     });
@@ -205,7 +223,7 @@ const verifyUserLogin = async (mobile_number,country_code, otp) => {
   const otpRecord = await Otp.findOne({
     userId: user._id,
     otp,
-    expiration: { $gt: Date.now() },
+    CreatedAt: { $gt: Date.now() },
   });
 
   if (!otpRecord) {
@@ -215,7 +233,7 @@ const verifyUserLogin = async (mobile_number,country_code, otp) => {
   //dynamic
   if (otpRecord) {
     // OTP is valid, proceed with login
-    // Generate a JWT token with a 1-day expiration
+    // Generate a JWT token with a 1-day CreatedAt
     const token = jwt.sign({ userId: user._id, mobile_number }, jwtSecret, {
       expiresIn: "1d",
     });
