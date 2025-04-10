@@ -4,7 +4,7 @@ exports.createLog = async (logData) => {
     return await LogManagement.create(logData);
 };
 
-exports.getAllLogs = async (startDate, endDate, productId) => {
+exports.getAllLogs = async (startDate, endDate, productId, userId, customerId, status ) => {
     const filter = {};
   
     if (startDate && endDate) {
@@ -18,9 +18,20 @@ exports.getAllLogs = async (startDate, endDate, productId) => {
       filter.timestamp = { $lte: new Date(endDate).setHours(23, 59, 59, 999) };
     }
   
-    // Product filter
     if (productId) {
-      filter.products = productId; // assuming 'products' is a reference or an array of ObjectIds
+      filter.products = productId;
+    }
+
+    if (userId) {
+      filter.userId = userId;
+    }
+
+    if (customerId) {
+      filter.customerId = customerId;
+    }
+
+    if (status) {
+      filter.status = status;
     }
   
     const logs = await LogManagement.find(filter)
