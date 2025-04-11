@@ -40,7 +40,7 @@ module.exports.manageProductStatus = async (req, res) => {
                 { $pull: { products: productId } }
             );
 
-            return successResponse(res, "Product removed from customers and status updated", null, null);
+            return successResponse(res, "Product updated successfully", null, null);
         }
 
         if (productStatus === ProductEnum.IN_USE) {
@@ -58,7 +58,7 @@ module.exports.manageProductStatus = async (req, res) => {
                 await customer.save();
             }
 
-            return successResponse(res, "Product assigned to customer and status updated", null, null);
+            return successResponse(res, "Product updated successfully", null, null);
         }
 
     } catch (error) {
