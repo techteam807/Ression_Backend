@@ -12,9 +12,9 @@ exports.createLog = async (req, res) => {
 
 exports.getAllLogs = async (req, res) => {
   try {
-    const { startDate, endDate, productId } = req.query;
+    const { startDate, endDate, productId, userId, customerId, status  } = req.query;
 
-    const logs = await logService.getAllLogs(startDate, endDate, productId);
+    const logs = await logService.getAllLogs(startDate, endDate, productId, userId, customerId, status);
 
     res.json({ logs });
   } catch (error) {
