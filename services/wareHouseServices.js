@@ -3,6 +3,7 @@ const WareHouseS = require("../models/wareHouseModel");
 const Product = require("../models/productModel");
 const ProductService = require("../services/productService");
 const Log = require("../services/logManagementService");
+const User = require('../models/userModel');
 
 const getWareHouses = async(filter = {}, search) => {
     if(search) {
@@ -46,20 +47,36 @@ const deleteWareHouse = async (id) => {
 
 const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     let messages = [];
+    let errorMessages = [];
     let success = false;
 
     //validate WareHose
     const ware_house = await getwareHousesByCode(wareHouse_code);
+    const Users  = await User.findById(userId);
 
-    if(!ware_house)
-    {
-        return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
-    }
+    // if(!ware_house)
+    // {
+    //     return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
+    // }
 
-    if(!userId)
-        {
-            return { success: false, message: `UserId required` };
-        }
+    // if (!Users) {
+    //     return { success: false, message: `User not found with id:${userId}`};
+    // }
+
+    if (!ware_house) {
+        errorMessages.push(`No Warehouse found for the given code: ${wareHouse_code}`);
+      }
+      
+      if (!Users) {
+        errorMessages.push(`User not found with id:${userId}`);
+      }
+      
+      if (errorMessages.length > 0) {
+        return {
+          success: false,
+          errorMessage:{errorMessages},
+        };
+      }
 
     //Fetch Products
     const Products = await ProductService.getMultipleProductByCode(Product_Codes);
