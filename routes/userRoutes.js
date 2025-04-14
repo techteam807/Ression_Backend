@@ -13,6 +13,7 @@ router.post('/signInUser',UserController.signInUser);
 router.post('/verifySignIn',UserController.verifyUserLogin);
 router.put('/approveUser',UserController.approveUser);
 router.put('/deleteUser',UserController.deleteUser);
+router.delete('/deleteUsers',UserController.deleteUserHard);
 router.put('/restoreUser',UserController.restoreUser);
 router.get('/getlogs',UserController.logsOfUser);
 router.get('/getUsersDropdown',UserController.getUserdropdown);
