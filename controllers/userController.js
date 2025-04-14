@@ -141,7 +141,7 @@ const deleteUserHard = async (req, res) => {
       return errorResponse(res, result.message, 404, null);
     }
 
-    return successResponse(res, result.message, null, null);
+    return successResponse(res, result.message, null, result.data);
   } catch (error) {
     return errorResponse(res, "Error Deleted User", 500, error);
   }
