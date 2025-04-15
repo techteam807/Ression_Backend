@@ -48,6 +48,11 @@ module.exports.manageProductStatus = async (req, res) => {
                 return errorResponse(res, "Customer ID is required for 'inuse' status", 400);
             }
 
+            await Customer.updateMany(
+                { products: productId },
+                { $pull: { products: productId } }
+            );
+
             const customer = await Customer.findById(customerId);
             if (!customer) {
                 return errorResponse(res, "Customer not found", 404);
