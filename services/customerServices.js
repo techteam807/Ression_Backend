@@ -384,7 +384,8 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
+  console.log("lbvkadv",geoCoordinates)
   let messages = [];
   let success = false;
 
@@ -474,7 +475,10 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => 
     if (Customers.products.length > 0) {
       await Product.updateMany(
         { _id: { $in: Customers.products } },
-        { productStatus: ProductEnum.EXHAUSTED }
+        {
+          $set: { productStatus: ProductEnum.EXHAUSTED },
+          $unset: { geoCoordinates: "" }
+        }
       );
       Customers.products = [];
 
@@ -496,9 +500,20 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => 
 
     await Product.updateMany(
       { productCode: { $in: NewProductCodes } },
-      { productStatus: ProductEnum.IN_USE }
+      {
+        $set: {
+          productStatus: ProductEnum.IN_USE,
+          geoCoordinates: {
+            type: 'Point',
+            coordinates: [
+              parseFloat(geoCoordinates.longitude),
+              parseFloat(geoCoordinates.latitude)
+            ]
+          }
+        }
+      }
     );
-
+    
     const genrateLogForIN_USE = {
       customerId:CustomerId,
       products:NewProducts.map((p) => p.id),
