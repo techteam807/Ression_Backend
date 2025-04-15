@@ -131,6 +131,22 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const deleteUserHard = async (req, res) => {
+  try {
+    const { mobile_number } = req.body;
+
+    const result = await UserService.deleteUserHard(mobile_number);
+
+    if (!result.success) {
+      return errorResponse(res, result.message, 404, null);
+    }
+
+    return successResponse(res, result.message, null, result.data);
+  } catch (error) {
+    return errorResponse(res, "Error Deleted User", 500, error);
+  }
+};
+
 const restoreUser = async (req, res) => {
   try {
     const { mobile_number } = req.body;
@@ -181,4 +197,5 @@ module.exports = {
   restoreUser,
   logsOfUser,
   getUserdropdown,
+  deleteUserHard
 };

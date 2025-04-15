@@ -104,10 +104,21 @@ const ManageCustomerAndProducts = async(req, res) => {
 
     const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId);
 
+        // if (result.success) {
+    //   return successResponse(res, result.message, null, null);
+    // } else {
+    //   return errorResponse(res, result.ProductCodes, 400, null);
+    // }
+    
     if (result.success) {
       return successResponse(res, result.message, null, null);
-    } else {
+    }
+    else if (!result.success && result.ProductCodes)
+    {
       return errorResponse(res, result.ProductCodes, 400, null);
+    }
+    else {
+      return errorResponse(res, result.errorMessage, 400, null);
     }
 
   } catch (error) {
