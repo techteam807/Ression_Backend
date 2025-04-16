@@ -9,26 +9,20 @@ const getUser = Joi.object({
 
 const signUpUser = Joi.object({
   user_name: Joi.string().min(3).max(50).required(),
-  // city: Joi.string().required(),
-  // mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
   mobile_number: Joi.string().pattern(/^\+\d{12}$/).required(),
 });
 
 const signInUser = Joi.object({
-  // mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
   mobile_number: Joi.string().pattern(/^\+\d{12}$/).required(),
 });
 
 const approveUser = Joi.object({
-  // mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
   mobile_number: Joi.string().pattern(/^\+\d{12}$/).required(),
 });
 const deleteUser = Joi.object({
-  // mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
   mobile_number: Joi.string().pattern(/^\+\d{12}$/).required(),
 });
 const restoreUser = Joi.object({
-  // mobile_number: Joi.string().pattern(/^[0-9]{10}$/).required(),
   mobile_number: Joi.string().pattern(/^\+\d{12}$/).required(),
 });
 

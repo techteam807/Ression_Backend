@@ -60,22 +60,18 @@ module.exports.manageProductStatus = async (req, res) => {
         { $pull: { products: productId } }
       );
 
-      return successResponse(
-        res,
-        "Product removed from customers and status updated",
-        null,
-        null
-      );
-    }
+            return successResponse(res, "Product updated successfully", null, null);
+        }
 
-    if (productStatus === ProductEnum.IN_USE) {
-      if (!customerId) {
-        return errorResponse(
-          res,
-          "Customer ID is required for 'inuse' status",
-          400
-        );
-      }
+        if (productStatus === ProductEnum.IN_USE) {
+            if (!customerId) {
+                return errorResponse(res, "Customer ID is required for 'inuse' status", 400);
+            }
+
+            await Customer.updateMany(
+                { products: productId },
+                { $pull: { products: productId } }
+            );
 
       const customer = await Customer.findById(customerId);
       if (!customer) {
@@ -87,16 +83,12 @@ module.exports.manageProductStatus = async (req, res) => {
         await customer.save();
       }
 
-      return successResponse(
-        res,
-        "Product assigned to customer and status updated",
-        null,
-        null
-      );
+            return successResponse(res, "Product updated successfully", null, null);
+        }
+
+    } catch (error) {
+        return errorResponse(res, "Error updating product status", 500, error);
     }
-  } catch (error) {
-    return errorResponse(res, "Error updating product status", 500, error);
-  }
 };
 
 module.exports.sendOtpForDeleteProduct = async (req, res) => {
