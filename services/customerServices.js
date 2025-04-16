@@ -241,7 +241,7 @@ const getCustomerBycodeOld = async (customer_code) => {
 const getCustomerBycode = async (customer_code) => {
   const customer = await Customer.findOne({ contact_number: customer_code }).populate({
     path: "products",
-    select: "productCode resinType productStatus",
+    select: "productCode resinType productStatus geoCoordinates",
   });
 
   if (!customer) return null;
@@ -385,7 +385,8 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
+  console.log("lbvkadv",geoCoordinates)
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -485,7 +486,10 @@ if (errorMessages.length > 0) {
     if (Customers.products.length > 0) {
       await Product.updateMany(
         { _id: { $in: Customers.products } },
-        { productStatus: ProductEnum.EXHAUSTED }
+        {
+          $set: { productStatus: ProductEnum.EXHAUSTED },
+          $unset: { geoCoordinates: {} }
+        }
       );
       Customers.products = [];
 
@@ -507,9 +511,31 @@ if (errorMessages.length > 0) {
 
     await Product.updateMany(
       { productCode: { $in: NewProductCodes } },
-      { productStatus: ProductEnum.IN_USE }
+      {
+        $set: {
+          productStatus: ProductEnum.IN_USE,
+          // geoCoordinates: {
+          //   type: 'Point',
+          //   coordinates: [
+          //     parseFloat(geoCoordinates.longitude),
+          //     parseFloat(geoCoordinates.latitude)
+          //   ]
+          // }
+          geoCoordinates: (
+            geoCoordinates &&
+            geoCoordinates.longitude &&
+            geoCoordinates.latitude
+          ) ? {
+            type: 'Point',
+            coordinates: [
+              parseFloat(geoCoordinates.longitude),
+              parseFloat(geoCoordinates.latitude)
+            ]
+          } : {}
+        }
+      }
     );
-
+    
     const genrateLogForIN_USE = {
       customerId:CustomerId,
       products:NewProducts.map((p) => p.id),
@@ -517,9 +543,9 @@ if (errorMessages.length > 0) {
       status:ProductEnum.IN_USE,
     }
 
-    await Log.createLog(genrateLogForIN_USE)
+    await Log.createLog(genrateLogForIN_USE);
 
-    await sendWhatsAppMsg(cutomerMobileNumber,customerName)
+    // await sendWhatsAppMsg(cutomerMobileNumber,customerName);
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
