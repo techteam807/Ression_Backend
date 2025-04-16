@@ -95,11 +95,22 @@ const scanMultipleProductsByCode = async (req, res) => {
       userId
     );
 
-    if (result.success) {
-      return successResponse(res, result.message, null, null);
-    } else {
-      return errorResponse(res, result.ProductCodes, 400, null);
-    }
+    // if (result.success) {
+    //   return successResponse(res, result.message, null, null);
+    // } else {
+    //   return errorResponse(res, result.ProductCodes, 400, null);
+    // }
+
+        if (result.success) {
+          return successResponse(res, result.message, null, null);
+        }
+        else if (!result.success && result.ProductCodes)
+        {
+          return errorResponse(res, result.ProductCodes, 400, null);
+        }
+        else {
+          return errorResponse(res, result.errorMessage, 400, null);
+        }
   } catch (error) {
     return errorResponse(
       res,

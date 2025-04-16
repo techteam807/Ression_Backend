@@ -3,6 +3,7 @@ const WareHouseS = require("../models/wareHouseModel");
 const Product = require("../models/productModel");
 const ProductService = require("../services/productService");
 const Log = require("../services/logManagementService");
+const User = require('../models/userModel');
 
 const getWareHouses = async(filter = {}, search) => {
     if(search) {
@@ -44,106 +45,38 @@ const deleteWareHouse = async (id) => {
       };
 };
 
-const scanMultipleProductsOLd = async (Product_Codes,wareHouse_code) => {
-    let messages = [];
-    let success = false;
-    const warehouse = await getwareHousesByCode(wareHouse_code);
-
-    if(!warehouse)
-    {
-        return { success: false, message: `No WareHouse found for given code: ${wareHouse_code}`};
-        // messages.push(`No WareHouse found for given code: ${wareHouse_code}`);
-    }
-    
-    const Products = await ProductService.getMultipleProductByCode(Product_Codes);
-
-    const foundProductCodes = Products.map((p) => p.productCode);
-
-    const missingProductCodes = Product_Codes.filter(code => !foundProductCodes.includes(code));
-
-    if (missingProductCodes.length > 0) {
-        // return { success: false, message: `No products found for given code ${missingProductCodes.join(", ")}` };
-        messages.push(`No products found for given codes : ${missingProductCodes.join(", ")}`);
-    }
-
-    //extract products
-    const exhaustedProducts = Products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED && p.isActive);
-    console.log("ex:",exhaustedProducts);
-
-    const newProducts = Products.filter((p) => p.productStatus === ProductEnum.NEW && p.isActive);
-    console.log("N:",newProducts);
-
-    const inUseProducts = Products.filter((p) => p.productStatus === ProductEnum.IN_USE && p.isActive);
-    console.log("in:",inUseProducts);
-
-    const deletedProducts = Products.filter((p) => !p.isActive);
-    console.log("del:",deletedProducts);
-
-    //extract productcodes
-    const exhaustedCodes = exhaustedProducts.map((ep) => ep.productCode).join(", ");
-    const newCodes = newProducts.map((np) => np.productCode).join(", ");
-    const inUseCodes = inUseProducts.map((ip) => ip.productCode).join(", ");
-    const deletedCode = deletedProducts.map((dp) => dp.productCode).join(", ");
-
-    
-
-    if(newProducts.length > 0)
-    {
-        messages.push(`Product status already NEW for: ${newCodes}`);
-    }
-
-    if(deletedProducts.length > 0)
-    {
-        messages.push(`Product Is Not Active for: ${deletedCode}`);
-    }    
-
-    if(inUseProducts.length > 0)
-    {
-        messages.push(`Product status InUse for: ${inUseCodes}`);
-    }   
-
-    if (exhaustedProducts.length > 0 && missingProductCodes.length === 0 && newCodes.length === 0 && inUseCodes.length === 0 && deletedCode.length === 0)
-    {
-        const exhaustedProductIds = exhaustedProducts.map((product) => product._id);
-
-        await Product.updateMany(
-            {_id: {$in:exhaustedProductIds} },
-            {$set:{productStatus:ProductEnum.NEW,isActive:true}}
-        )
-
-        messages.push(`Product status updated to NEW for: ${exhaustedCodes}`);
-        success=true;
-    }
-
-    return {
-        success,
-        message:messages,
-        ProductCodes: {
-            notFound: missingProductCodes,
-            alreadyNew: newCodes, 
-            inUse:inUseCodes,
-            deleted: deletedCode, 
-        },
-        data: exhaustedProducts, 
-    };
-};
-
 const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     let messages = [];
+    let errorMessages = [];
     let success = false;
 
     //validate WareHose
     const ware_house = await getwareHousesByCode(wareHouse_code);
+    const Users  = await User.findById(userId);
 
-    if(!ware_house)
-    {
-        return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
-    }
+    // if(!ware_house)
+    // {
+    //     return { success: false, message: `No Warehouse found for the given code: ${wareHouse_code}` };
+    // }
 
-    if(!userId)
-        {
-            return { success: false, message: `UserId required` };
-        }
+    // if (!Users) {
+    //     return { success: false, message: `User not found with id:${userId}`};
+    // }
+
+    if (!ware_house) {
+        errorMessages.push(`No Warehouse found for the given code: ${wareHouse_code}`);
+      }
+      
+      if (!Users) {
+        errorMessages.push(`User not found with id:${userId}`);
+      }
+      
+      if (errorMessages.length > 0) {
+        return {
+          success: false,
+          errorMessage:{errorMessages},
+        };
+      }
 
     //Fetch Products
     const Products = await ProductService.getMultipleProductByCode(Product_Codes);
@@ -177,11 +110,7 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
             else if(product.productStatus === ProductEnum.IN_USE)
             {
                 InUseProducts.push(product);
-            }
-            // else
-            // {
-            //     messages.push("Product Filter Dose Not Processed");
-            // }        
+            }     
         }
         else
         {
@@ -209,10 +138,6 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     {
         messages.push(`Product is not active for: ${DeletedProductCodes}`);
     }
-    // else
-    // {
-    //     messages.push(`Product Filter Dose Not Processed`);
-    // }
 
     //process for update product status exhausted to new
     if(ExhaustedProducts.length > 0 && !NewProductCodes && !InUseProductCodes && !DeletedProductCodes && !NotFoundProductCodes)

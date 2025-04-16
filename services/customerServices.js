@@ -1,6 +1,7 @@
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
@@ -388,17 +389,27 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoC
   console.log("lbvkadv",geoCoordinates)
   let messages = [];
   let success = false;
+  let errorMessages = [];
 
   const Customers = await Customer.findOne({contact_number:customer_code});
   const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
+  const Users = await User.findById(userId);
 
-  if (!Customers) {
-    return { success: false, message: `Customer not found with code: ${customer_code}`};
-  }
 
-  if (!userId) {
-    return { success: false, message: `userId required`};
-  }
+if (!Customers) {
+  errorMessages.push(`Customer not found with code: ${customer_code}`);
+}
+
+if (!Users) {
+  errorMessages.push(`User not found with id:${userId}`);
+}
+
+if (errorMessages.length > 0) {
+  return {
+    success: false,
+    errorMessage:{errorMessages},
+  };
+}
 
   const customerEXHAUSTEDId = Customers.products;
   const rawMobile = Customers.mobile;
