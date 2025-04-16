@@ -60,18 +60,22 @@ module.exports.manageProductStatus = async (req, res) => {
         { $pull: { products: productId } }
       );
 
-            return successResponse(res, "Product updated successfully", null, null);
-        }
+      return successResponse(res, "Product updated successfully", null, null);
+    }
 
-        if (productStatus === ProductEnum.IN_USE) {
-            if (!customerId) {
-                return errorResponse(res, "Customer ID is required for 'inuse' status", 400);
-            }
+    if (productStatus === ProductEnum.IN_USE) {
+      if (!customerId) {
+        return errorResponse(
+          res,
+          "Customer ID is required for 'inuse' status",
+          400
+        );
+      }
 
-            await Customer.updateMany(
-                { products: productId },
-                { $pull: { products: productId } }
-            );
+      await Customer.updateMany(
+        { products: productId },
+        { $pull: { products: productId } }
+      );
 
       const customer = await Customer.findById(customerId);
       if (!customer) {
@@ -83,12 +87,11 @@ module.exports.manageProductStatus = async (req, res) => {
         await customer.save();
       }
 
-            return successResponse(res, "Product updated successfully", null, null);
-        }
-
-    } catch (error) {
-        return errorResponse(res, "Error updating product status", 500, error);
+      return successResponse(res, "Product updated successfully", null, null);
     }
+  } catch (error) {
+    return errorResponse(res, "Error updating product status", 500, error);
+  }
 };
 
 module.exports.sendOtpForDeleteProduct = async (req, res) => {
@@ -144,7 +147,6 @@ module.exports.deleteProductProcess = async (req, res) => {
     });
   }
 };
-  
 
 const generateOtpForProductDelete = async (mobile_number) => {
   const otp = Math.floor(100000 + Math.random() * 900000);
