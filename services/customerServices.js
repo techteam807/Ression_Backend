@@ -240,7 +240,7 @@ const getCustomerBycodeOld = async (customer_code) => {
 const getCustomerBycode = async (customer_code) => {
   const customer = await Customer.findOne({ contact_number: customer_code }).populate({
     path: "products",
-    select: "productCode resinType productStatus",
+    select: "productCode resinType productStatus geoCoordinates",
   });
 
   if (!customer) return null;
@@ -477,7 +477,7 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoC
         { _id: { $in: Customers.products } },
         {
           $set: { productStatus: ProductEnum.EXHAUSTED },
-          $unset: { geoCoordinates: "" }
+          $unset: { geoCoordinates: {} }
         }
       );
       Customers.products = [];
@@ -503,13 +503,24 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoC
       {
         $set: {
           productStatus: ProductEnum.IN_USE,
-          geoCoordinates: {
+          // geoCoordinates: {
+          //   type: 'Point',
+          //   coordinates: [
+          //     parseFloat(geoCoordinates.longitude),
+          //     parseFloat(geoCoordinates.latitude)
+          //   ]
+          // }
+          geoCoordinates: (
+            geoCoordinates &&
+            geoCoordinates.longitude &&
+            geoCoordinates.latitude
+          ) ? {
             type: 'Point',
             coordinates: [
               parseFloat(geoCoordinates.longitude),
               parseFloat(geoCoordinates.latitude)
             ]
-          }
+          } : {}
         }
       }
     );
@@ -521,9 +532,9 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoC
       status:ProductEnum.IN_USE,
     }
 
-    await Log.createLog(genrateLogForIN_USE)
+    await Log.createLog(genrateLogForIN_USE);
 
-    await sendWhatsAppMsg(cutomerMobileNumber,customerName)
+    // await sendWhatsAppMsg(cutomerMobileNumber,customerName);
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`

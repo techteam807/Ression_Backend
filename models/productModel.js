@@ -28,8 +28,9 @@ const ProductSchema = new mongoose.Schema(
     adapterSize:{type:String},
     productStatus: { type: String, enum: [ProductEnum.NEW, ProductEnum.EXHAUSTED, ProductEnum.IN_USE], required: true, default: ProductEnum.NEW},
     geoCoordinates: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
-      coordinates: { type: [Number] } // [longitude, latitude]  
+      type: { type: String, enum: ['Point']},
+      coordinates: { type: [Number] },// [longitude, latitude]  
+      default:{} 
     },
   },
   { timestamps: true }
