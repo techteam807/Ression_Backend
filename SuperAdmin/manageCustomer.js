@@ -43,7 +43,7 @@ module.exports.manageProductStatus = async (req, res) => {
 
     const product = await Product.findByIdAndUpdate(
       productId,
-      { productStatus, isActive: true },
+      { productStatus, isActive: true ,geoCoordinates:{}},
       { new: true }
     );
 
