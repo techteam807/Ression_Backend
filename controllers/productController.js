@@ -37,7 +37,7 @@ const getProductOLd = async (req, res) => {
 
 const getProduct = async (req, res) => {
   try {
-    const { active, search } = req.query;
+    const { active, search ,productStatus} = req.query;
     let filter = {};
 
     if (active === "true") {
@@ -46,7 +46,7 @@ const getProduct = async (req, res) => {
       filter.isActive = false;
     }
 
-    const result = await productService.getAllProducts(filter, search);
+    const result = await productService.getAllProducts(filter, search,productStatus);
     return successResponse(res, "Products fetched successfully", null, result);
   } catch (error) {
     return errorResponse(res, "Error fetching products", 500, error);
