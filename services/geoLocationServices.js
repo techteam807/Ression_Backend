@@ -29,9 +29,12 @@ const storeGeoLocation = async (customerId, geoCoordinates) => {
 
     if(existingLocation)
     {
-        existingLocation.geoCoordinates = newCoordinates;
-        await existingLocation.save();
-      
+        if( geoCoordinates &&
+            geoCoordinates.longitude &&
+            geoCoordinates.latitude){
+                existingLocation.geoCoordinates = newCoordinates;
+                await existingLocation.save();
+            }
         return {
           status: true,
           message: 'GeoLocation updated successfully',
