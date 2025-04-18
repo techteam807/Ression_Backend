@@ -6,6 +6,7 @@ const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
 const request = require("request");
+const geoLocation = require("../services/geoLocationServices.js");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -386,7 +387,6 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
 };
 
 const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
-  console.log("lbvkadv",geoCoordinates)
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -488,7 +488,6 @@ if (errorMessages.length > 0) {
         { _id: { $in: Customers.products } },
         {
           $set: { productStatus: ProductEnum.EXHAUSTED },
-          $unset: { geoCoordinates: {} }
         }
       );
       Customers.products = [];
@@ -514,24 +513,6 @@ if (errorMessages.length > 0) {
       {
         $set: {
           productStatus: ProductEnum.IN_USE,
-          // geoCoordinates: {
-          //   type: 'Point',
-          //   coordinates: [
-          //     parseFloat(geoCoordinates.longitude),
-          //     parseFloat(geoCoordinates.latitude)
-          //   ]
-          // }
-          geoCoordinates: (
-            geoCoordinates &&
-            geoCoordinates.longitude &&
-            geoCoordinates.latitude
-          ) ? {
-            type: 'Point',
-            coordinates: [
-              parseFloat(geoCoordinates.longitude),
-              parseFloat(geoCoordinates.latitude)
-            ]
-          } : {}
         }
       }
     );
@@ -543,6 +524,7 @@ if (errorMessages.length > 0) {
       status:ProductEnum.IN_USE,
     }
 
+    await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
 
     // await sendWhatsAppMsg(cutomerMobileNumber,customerName);
