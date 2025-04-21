@@ -19,14 +19,8 @@ const ProductSchema = new mongoose.Schema(
           enum: Object.values(ProductEnum),
           default: ProductEnum.NEW 
     },
-    geoCoordinates: {
-      type: { type: String, enum: ['Point']},
-      coordinates: { type: [Number] },// [longitude, latitude]  
-      default:{} 
-    },
   },
   { timestamps: true }
 );
 
-ProductSchema.index({ geoCoordinates: "2dsphere" });
 module.exports = mongoose.model("Product", ProductSchema);
