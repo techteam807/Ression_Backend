@@ -527,7 +527,7 @@ if (errorMessages.length > 0) {
     await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
 
-    // await sendWhatsAppMsg(cutomerMobileNumber,customerName);
+    await sendWhatsAppMsg(cutomerMobileNumber,customerName);
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
