@@ -52,7 +52,7 @@ const getAllProductsold = async (filter = {}, search, page, limit) => {
   };
 };
 
-const getAllProducts = async (filter = {}, search) => {
+const getAllProducts = async (filter = {}, search,productStatus) => {
 
   if(search) {
     filter.$or = [
@@ -61,7 +61,9 @@ const getAllProducts = async (filter = {}, search) => {
       {  productStatus: new RegExp(search, "i") },
     ];
   }
-
+  if(productStatus){
+    filter.productStatus = productStatus
+  }
   // const products = await Product.find(filter);//default order
   const products = await ProductS.find(filter).sort({ updatedAt: -1 });//desc order
   

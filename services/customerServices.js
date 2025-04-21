@@ -6,6 +6,7 @@ const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
 const request = require("request");
+const geoLocation = require("../services/geoLocationServices.js");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -241,7 +242,7 @@ const getCustomerBycodeOld = async (customer_code) => {
 const getCustomerBycode = async (customer_code) => {
   const customer = await Customer.findOne({ contact_number: customer_code }).populate({
     path: "products",
-    select: "productCode resinType productStatus",
+    select: "productCode resinType productStatus geoCoordinates",
   });
 
   if (!customer) return null;
@@ -385,7 +386,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -485,7 +486,9 @@ if (errorMessages.length > 0) {
     if (Customers.products.length > 0) {
       await Product.updateMany(
         { _id: { $in: Customers.products } },
-        { productStatus: ProductEnum.EXHAUSTED }
+        {
+          $set: { productStatus: ProductEnum.EXHAUSTED },
+        }
       );
       Customers.products = [];
 
@@ -507,9 +510,13 @@ if (errorMessages.length > 0) {
 
     await Product.updateMany(
       { productCode: { $in: NewProductCodes } },
-      { productStatus: ProductEnum.IN_USE }
+      {
+        $set: {
+          productStatus: ProductEnum.IN_USE,
+        }
+      }
     );
-
+    
     const genrateLogForIN_USE = {
       customerId:CustomerId,
       products:NewProducts.map((p) => p.id),
@@ -517,9 +524,10 @@ if (errorMessages.length > 0) {
       status:ProductEnum.IN_USE,
     }
 
-    await Log.createLog(genrateLogForIN_USE)
+    await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
+    await Log.createLog(genrateLogForIN_USE);
 
-    await sendWhatsAppMsg(cutomerMobileNumber,customerName)
+    await sendWhatsAppMsg(cutomerMobileNumber,customerName);
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
