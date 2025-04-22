@@ -100,8 +100,9 @@ const EditProduct = async (req, res) => {
 const DeleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const productNotes = req.body.productNotes; 
 
-    const result = await productService.deleteProduct(id);
+    const result = await productService.deleteProduct(id,productNotes);
 
     if (!result.success) {
       return errorResponse(res, result.message, 404, null);
