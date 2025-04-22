@@ -7,6 +7,7 @@ const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
+const puppeteer = require('puppeteer');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -106,13 +107,34 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       "contact_number",
       "customer_name",
       "cf_cartridge_qty",
+      "cf_google_map_link"
     ];
 
+
     for (const zohoCustomer of zohoCustomers) {
+      console.log("map",zohoCustomer.cf_google_map_link);
+
+      const mapLink = zohoCustomer.cf_google_map_link;
+
+      if (mapLink) {
+        const coords = await getCoordinatesFromShortLink(mapLink);
+        if (coords) {
+          zohoCustomer.geoCoordinates = {
+            type: 'Point',
+            coordinates: [coords.lng, coords.lat]
+          };
+        }
+      }
+
       const existing = existingCustomerMap.get(zohoCustomer.customer_id);
 
       if (!existing) {
-        newCustomers.push(zohoCustomer);
+        console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+        const newCustomer = new Customer({
+          ...zohoCustomer,
+          geoCoordinates: zohoCustomer.geoCoordinates || undefined, // manually add geoCoordinates
+        });
+        newCustomers.push(newCustomer);
       } else {
         let hasChanges = false;
 
@@ -127,15 +149,20 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
         }
 
         if (hasChanges) {
+          console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
           updates.push({
             updateOne: {
               filter: { customer_id: zohoCustomer.customer_id },
-              update: { $set: zohoCustomer },
+              update: { $set:
+                {...zohoCustomer,geoCoordinates: zohoCustomer.geoCoordinates || undefined },
+              }
             },
           });
         }
       }
     }
+
+    // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates);
 
     if (newCustomers.length > 0) {
       await Customer.insertMany(newCustomers);
@@ -597,6 +624,53 @@ const getCustomerDropdown = async (filter) => {
   }
 };
 
+const getCustomerlocations = async (filter) => {
+  try{
+    return await Customer.find(filter)
+    .select("_id display_name contact_number geoCoordinates").lean();
+
+  }catch(error){
+    throw new Error("Error in getCustomerDropdown:", error.message);
+  }
+};
+
+const getCoordinatesFromShortLink = async (shortUrl) => {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
+      await page.goto(shortUrl, { waitUntil: 'networkidle2' });
+
+      const currentUrl = page.url();
+      // console.log("Resolved URL:", currentUrl);
+
+      // Regex to extract coordinates from the URL
+      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = currentUrl.match(regex);
+
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+
+        // Log coordinates (you can store these in your model here)
+        console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
+        return { lat, lng };
+      } else {
+        console.log("Could not extract coordinates for:", shortUrl);
+        return null;
+      }
+    } else {
+      console.log("Invalid Google Maps link:", shortUrl);
+      return null;
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    return null;
+  } finally {
+    await browser.close();
+  }
+};
 module.exports = {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
@@ -607,4 +681,5 @@ module.exports = {
   // replaceCustomersProductsNew,
   manageCustomerAndProduct,
   getCustomerDropdown,
+  getCustomerlocations,
 };

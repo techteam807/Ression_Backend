@@ -1,6 +1,7 @@
 
 const ProductS = require("../models/productModel");
 const Customer = require("../models/customerModel");
+const Log = require("../services/logManagementService.js");
 const { ProductEnum } = require("../config/global");
 
 const getPro = async (filter) => {
@@ -122,7 +123,7 @@ const updateProduct = async (id, data) => {
   };
 };
 
-const deleteProduct = async (id) => {
+const deleteProduct = async (id, productNotes) => {
   const Product = await getProductById(id);
 
   if(!Product)
@@ -130,7 +131,16 @@ const deleteProduct = async (id) => {
     return { success: false, message: "Product not found"};
   }
 
-  const product = await ProductS.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED},{new:true});
+  const product = await ProductS.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED, productNotes:productNotes},{new:true});
+
+  const DeleteProductsLog = {
+    products:id,
+    isActive:false,
+    status:ProductEnum.EXHAUSTED,
+    productNotes:productNotes,
+  }
+
+  await Log.createLog(DeleteProductsLog)
 
   await Customer.updateMany(
     {products:id},
@@ -152,7 +162,14 @@ const restoreProduct = async (id) => {
       return { success: false, message: "Product not found"};
   }
 
-  const product =await ProductS.findByIdAndUpdate(id,{isActive:true},{new:true});
+  const product =await ProductS.findByIdAndUpdate(id,{isActive:true,productNotes:""},{new:true});
+
+  const restoreProductsLog = {
+    products:id,
+    status:ProductEnum.EXHAUSTED,
+  }
+
+  await Log.createLog(restoreProductsLog)
 
   return {
     success: true,
