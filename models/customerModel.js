@@ -49,9 +49,10 @@ const CustomerSchema = new mongoose.Schema(
     tags: [String],
     cf_google_map_link:String,
     geoCoordinates: {
-      type: { type: String, enum: ['Point'], required: true },
-      coordinates: { type: [Number], required: true },// Default coordinates
-    },    
+      type: { type: String, enum: ['Point']},
+      coordinates: { type: [Number] },// [longitude, latitude]  
+      default:{} 
+    }, 
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },
   { timestamps: true }

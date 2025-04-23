@@ -112,24 +112,21 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
 
 
     for (const zohoCustomer of zohoCustomers) {
-      console.log("map",zohoCustomer.cf_google_map_link);
-
-      const mapLink = zohoCustomer.cf_google_map_link;
-
-      if (mapLink) {
-        const coords = await getCoordinatesFromShortLink(mapLink);
-        if (coords) {
-          zohoCustomer.geoCoordinates = {
-            type: 'Point',
-            coordinates: [coords.lng, coords.lat]
-          };
-        }
-      }
-
       const existing = existingCustomerMap.get(zohoCustomer.customer_id);
 
       if (!existing) {
+
+        if (zohoCustomer.cf_google_map_link) {
+          const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          if (coords) {
+            zohoCustomer.geoCoordinates = {
+              type: 'Point',
+              coordinates: [coords.lng, coords.lat]
+            };
+          }
+        }
         console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
         const newCustomer = new Customer({
           ...zohoCustomer,
           geoCoordinates: zohoCustomer.geoCoordinates || undefined, // manually add geoCoordinates
@@ -149,7 +146,19 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
         }
 
         if (hasChanges) {
+          if (zohoCustomer.cf_google_map_link) {
+            const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+            if (coords) {
+              zohoCustomer.geoCoordinates = {
+                type: 'Point',
+                coordinates: [coords.lng, coords.lat]
+              };
+            }
+          }
+      
+          // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
           console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+          
           updates.push({
             updateOne: {
               filter: { customer_id: zohoCustomer.customer_id },
