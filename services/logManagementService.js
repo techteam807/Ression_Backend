@@ -226,33 +226,45 @@ exports.technicianScoreOne = async (startDate, endDate, userId) => {
 
 exports.technicianScore = async (startDate, endDate, userId) => {
   const filter = {};
+  const today = moment();
+
+  let startMoment, endMoment;
 
   // Handle startDate if it's provided
-  if (startDate) {
-    const startMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").startOf('day');
-    filter.timestamp = { $gte: startMoment.toDate() };
+  if (!startDate && !endDate) {
+    // Case 1: Neither date provided → use current week's start and end
+    startMoment = today.clone().startOf('week');
+    endMoment = today.clone().endOf('week');
+  } else if (startDate && !endDate) {
+    // Case 2: Only startDate provided → use the same day's start and end
+    startMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").startOf('day');
+    endMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
+  } else {
+    // Case 3: Either one or both provided
+    if (startDate) {
+      startMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").startOf('day');
+    }
+    if (endDate) {
+      endMoment = moment(endDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
+    }
   }
 
-  // Handle endDate if it's provided
-  if (endDate) {
-    const endMoment = moment(endDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
+  if (startMoment) {
+    filter.timestamp = { $gte: startMoment.toDate() };
+  }
+  if (endMoment) {
     filter.timestamp = {
       ...filter.timestamp,
       $lte: endMoment.toDate(),
     };
   }
 
-  // If only endDate is provided
-  if (!startDate && endDate) {
-    const endMoment = moment(endDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
-    filter.timestamp = {
-      $lte: endMoment.toDate(),
-    };
-  }
-
+if(userId)
+{
+  filter.userId = userId;
+}
   // Fetch logs
   const logs = await LogManagement.find({
-    userId: userId,
     status: ProductEnum.IN_USE,
     ...filter,
   }).populate('userId').sort({ timestamp: 1 });
@@ -260,6 +272,7 @@ exports.technicianScore = async (startDate, endDate, userId) => {
   const groupedByTechnician = {};
 
   for (const log of logs) {
+    if (!log.userId) continue;
     const technicianId = log.userId._id.toString();
     const technicianName = log.userId.user_name || technicianId; // <- updated here
     const date = moment(log.timestamp).format('YYYY-MM-DD');
@@ -281,6 +294,7 @@ exports.technicianScore = async (startDate, endDate, userId) => {
   const finalResult = [];
 
   for (const techId in groupedByTechnician) {
+    console.log(groupedByTechnician)
     const techLogs = groupedByTechnician[techId];
     let totalReplacements = 0;
     let totalScore = 0;
@@ -293,6 +307,7 @@ exports.technicianScore = async (startDate, endDate, userId) => {
       const timestamps = techLogs[date].replacements;
       const techName = techLogs[date].name;
       technicianName = techName;
+      technicianId = techLogs[date]._id;
       const scores = [];
 
       totalReplacements += timestamps.length;
@@ -345,11 +360,13 @@ exports.technicianScore = async (startDate, endDate, userId) => {
     const avgScore = totalScore / scoreCount;
 
     finalResult.push({
+      technician_id:techId,
       technician: technicianName,
-      dateRange: `${dateRangeStart} to ${dateRangeEnd}`,
       totalReplacements,
       averageEfficiencyScore: parseFloat(avgScore.toFixed(2)),
     });
+
+    finalResult.sort((a, b) => b.averageEfficiencyScore - a.averageEfficiencyScore);
   }
 
   return finalResult;

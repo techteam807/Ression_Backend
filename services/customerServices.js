@@ -8,6 +8,8 @@ const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 const puppeteer = require('puppeteer');
+const MissedCartidge = require('../models/missedCartidgeModel.js');
+const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -158,7 +160,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       
           // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
           console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
-          
+
           updates.push({
             updateOne: {
               filter: { customer_id: zohoCustomer.customer_id },
@@ -422,7 +424,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates,url) => {
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -448,6 +450,7 @@ if (errorMessages.length > 0) {
 }
 
   const customerEXHAUSTEDId = Customers.products;
+  console.log(customerEXHAUSTEDId)
   const rawMobile = Customers.mobile;
   const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
   const customerName = Customers.display_name;
@@ -563,7 +566,14 @@ if (errorMessages.length > 0) {
     await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
 
+    if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
+    {
+      await sendFirstTimeMsg(cutomerMobileNumber,url);
+    }
+    else
+    {
     await sendWhatsAppMsg(cutomerMobileNumber,customerName);
+    }
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
@@ -582,45 +592,6 @@ if (errorMessages.length > 0) {
     },
     Customer: Customers,
   };
-};
-
-const sendWhatsAppMsg = async (mobile_number, name) => {
-  console.log(mobile_number,name);
-  return new Promise((resolve, reject) => {
-    const options = {
-      method: "POST",
-      url: process.env.GALLABOX_URL,
-      headers: {
-        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
-        apikey: process.env.GALLABOX_API_KEY, // lowercase
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        channelId: process.env.GALLABOX_CHANNEL_ID,
-        channelType: "whatsapp",
-        recipient: {
-          name: mobile_number,
-          phone: `91${mobile_number}`,
-        },
-        whatsapp: {
-          type: "template",
-          template: {
-            templateName: "bw_scan_app_utility2",
-            bodyValues: { name: name }, // Change from object to array
-          },
-        },
-      }),
-    };
-
-    request(options, (error, response) => {
-      if (error) {
-        console.error("Error sending WhatsApp Msg:", error);
-        return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
-      }
-      console.log("WhatsApp Message Sent:", response.body);
-      resolve({ success: true, message: "Msg sent successfully." });
-    });
-  });
 };
 
 const getCustomerDropdown = async (filter) => {
@@ -680,6 +651,38 @@ const getCoordinatesFromShortLink = async (shortUrl) => {
     await browser.close();
   }
 };
+
+const sendCartidgeMissedMessage = async (cust_id) => {
+  const customer = await Customer.findById(cust_id);
+
+  if(!customer)
+  {
+    return { success:false, message:`Customer Not Found With Id ${cust_id}`};
+  }
+
+  const Customer_Name = customer.display_name;
+  const Customer_Phone = customer.mobile;
+
+  await sendMissedCatridgeMsg(Customer_Phone, Customer_Name);
+  const MissedCartidgeLog = {
+    customerId:cust_id,
+  }
+  await MissedCartidge.create(MissedCartidgeLog);
+  return { success: true, message:"Message Sent.." }
+};
+
+const getMissedCartidgeLog = async (customerId) => {
+  const filter = {};
+
+  if(customerId)
+  {
+    filter.customerId = customerId;
+  }
+  const getMissedCartidgeData = await MissedCartidge.find(filter).populate('customerId', 'display_name')
+
+  return getMissedCartidgeData
+};
+
 module.exports = {
   getAccessToken,
   fetchAndStoreCustomersWithRefresh,
@@ -691,4 +694,6 @@ module.exports = {
   manageCustomerAndProduct,
   getCustomerDropdown,
   getCustomerlocations,
+  sendCartidgeMissedMessage,
+  getMissedCartidgeLog
 };

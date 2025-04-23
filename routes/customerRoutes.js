@@ -13,6 +13,9 @@ router.get('/code',validateRequest(getCustomerByCode),CustomerController.getCust
 // router.post('/manageProductsOld',validateRequest(manageProductsOld),CustomerController.ReplaceProductsOld);
 // router.post('/manageProductsNew',validateRequest(manageProductsNew),CustomerController.ReplaceProductsNew);
 router.post('/manageProducts',CustomerController.ManageCustomerAndProducts);
+router.post('/SendMissedCartidgeMsg',CustomerController.sendCartidgeMissedMsg);
+router.get('/missedCartidgeLog',CustomerController.MissedCartidgeLog);
+
 
 
 module.exports = router;
