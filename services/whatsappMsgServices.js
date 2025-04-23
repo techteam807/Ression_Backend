@@ -129,6 +129,14 @@ const sendMissedCatridgeMsg = async( mobile_number, name) => {
   const sendFirstTimeMsg = async (mobile_number,url) => {
     console.log(mobile_number,url);
     return new Promise((resolve, reject) => {
+      const template = {
+        templateName: GALLABOX_FIRSTTIMEMSG,
+      };
+  
+      if (url) {
+        template.headerValues = { mediaUrl: url };
+      }
+
       const options = {
         method: "POST",
         url: process.env.GALLABOX_URL,
@@ -146,11 +154,7 @@ const sendMissedCatridgeMsg = async( mobile_number, name) => {
           },
           whatsapp: {
             type: "template",
-            template: {
-              templateName: GALLABOX_FIRSTTIMEMSG,
-              headerValues:{mediaUrl:url}
-              // bodyValues: { name: name }, // Change from object to array
-            },
+            template, // shorthand for `template: template`
           },
         }),
       };
