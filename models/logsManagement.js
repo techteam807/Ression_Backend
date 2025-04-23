@@ -10,6 +10,8 @@ const logManagementSchema = new mongoose.Schema({
     enum: Object.values(ProductEnum),
     default: ProductEnum.NEW 
   }, 
+  isActive: { type: Boolean, default: true },
+  productNotes:String,
   timestamp: { type: Date, default: Date.now }, 
 });
 

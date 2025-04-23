@@ -6,6 +6,7 @@ const {
   fetchAndStoreCustomersWithRefresh,
   manageCustomerAndProduct,
   getCustomerDropdown,
+  getCustomerlocations,
 
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
@@ -137,5 +138,16 @@ const getCustomerdropdown = async (req, res) => {
   }
 };
 
+const getCustomerlocation = async (req, res) => {
+  try{
+    const filter = { ...req.query };
+    const customers = await getCustomerlocations(filter);
 
-module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts };
+    return successResponse(res, "Customers fetched successfully", null, customers);
+  }catch(error){
+    return errorResponse(res, "Error fetching customer dropdown", 500, error);
+  }
+};
+
+
+module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation };
