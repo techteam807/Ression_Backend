@@ -3,6 +3,7 @@ const { ProductEnum } = require('../config/global.js');
 
 const logManagementSchema = new mongoose.Schema({
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" }, 
+  WareHouseId: { type: mongoose.Schema.Types.ObjectId, ref: "WareHouse" }, 
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }], 
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   status: { 

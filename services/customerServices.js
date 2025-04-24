@@ -3,9 +3,9 @@ const axios = require("axios");
 const Customer = require("../models/customerModel");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
+const Warehouse = require("../models/wareHouseModel.js");
 const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
-const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
@@ -541,6 +541,17 @@ if (errorMessages.length > 0) {
       }
 
       await Log.createLog(genrateLogForEXHAUSTED)
+    }
+
+    const warehousesWithTheseProducts = await Warehouse.find({
+      products: { $in: NewProducts.map(p => p._id) }
+    });
+    
+    for (const warehouse of warehousesWithTheseProducts) {
+      warehouse.products = warehouse.products.filter(
+        (pId) => !NewProducts.map(p => p._id.toString()).includes(pId.toString())
+      );
+      await warehouse.save();
     }
 
     // Attach new products and update their status

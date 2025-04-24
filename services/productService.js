@@ -1,6 +1,7 @@
 
 const ProductS = require("../models/productModel");
 const Customer = require("../models/customerModel");
+const WareHouse = require("../models/wareHouseModel.js");
 const Log = require("../services/logManagementService.js");
 const { ProductEnum } = require("../config/global");
 
@@ -68,16 +69,34 @@ const getAllProducts = async (filter = {}, search,productStatus) => {
   // const products = await Product.find(filter);//default order
   const products = await ProductS.find(filter).sort({ updatedAt: -1 });//desc order
   
-  const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
+  // const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
   const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED).map(formatProduct);
 
   //relevent fields
    let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE).map(formatProduct);
+   let newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
+  
 
    const Customers = await Customer.find(
      { products: { $in: inuseProducts.map((p) => p._id) } },
      "contact_number first_name last_name mobile email display_name products" // Ensure 'products' is included
    );
+
+   const ware_house = await WareHouse.find(
+    { products : {$in: newProducts.map((p) => p._id) } },
+    "wareHouseCode products"
+   )
+
+   newProducts = newProducts.map((product) => {
+    const warehouseForProduct = ware_house.filter(
+      (wareh) => Array.isArray(wareh.products) && wareh.products.includes(product._id.toString()) 
+    );
+
+    return {
+      ...product,
+      WareHouse: warehouseForProduct.length > 0 ? warehouseForProduct[0] :null,
+    }
+   })
  
    inuseProducts = inuseProducts.map((product) => {
      const customersForProduct = Customers.filter(

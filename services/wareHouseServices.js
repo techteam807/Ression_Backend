@@ -12,7 +12,10 @@ const getWareHouses = async(filter = {}, search) => {
         ];
       }
 
-      const wareHouse = await WareHouseS.find(filter);
+      const wareHouse = await WareHouseS.find(filter).populate({
+        path: "products",
+        select: "productId productCode"
+      });
     
       return { wareHouse};
 };
@@ -144,12 +147,20 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     {
         const ExhaustedProductIds = ExhaustedProducts.map(p => p._id);
 
+        const wareHouseProducts = ware_house.products || [];
+        const newwareHouseProducts =  ExhaustedProductIds.filter(id => !wareHouseProducts.includes(id));
+
+
+        ware_house.products = [...wareHouseProducts, ...newwareHouseProducts];;
+        await ware_house.save();
+
         await Product.updateMany(
             { _id: { $in: ExhaustedProductIds } },
             { $set: { productStatus: ProductEnum.NEW, isActive: true } }
         );
 
         const genrateLogForNew = {
+              WareHouseId:ware_house._id,
               products:ExhaustedProducts.map((p) => p.id),
               userId:userId,
               status:ProductEnum.NEW,
