@@ -671,15 +671,39 @@ const sendCartidgeMissedMessage = async (cust_id) => {
   return { success: true, message:"Message Sent.." }
 };
 
-const getMissedCartidgeLog = async (customerId) => {
+const getMissedCartidgeLog = async (customerId, startDate, endDate) => {
   const filter = {};
 
   if(customerId)
   {
     filter.customerId = customerId;
   }
-  const getMissedCartidgeData = await MissedCartidge.find(filter).populate('customerId', 'display_name')
 
+  
+  let start, end;
+
+  const parseDate = (dateStr) => {
+    const [day, month, year] = dateStr.split("-");
+    return new Date(`${year}-${month}-${day}`);
+  };
+
+  if (!startDate || !endDate) {
+    const now = new Date();
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+  } else {
+    start = parseDate(startDate);
+    end = parseDate(endDate);
+    end.setHours(23, 59, 59, 999);
+  }
+
+  filter.timestamp  = { $gte: start, $lte: end };
+
+  const getMissedCartidgeData = await MissedCartidge
+  .find(filter)
+  .sort({ timestamp : -1 }) // descending order
+  .populate('customerId', 'display_name contact_number first_name last_name mobile email');
   return getMissedCartidgeData
 };
 
