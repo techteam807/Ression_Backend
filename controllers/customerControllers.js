@@ -173,9 +173,9 @@ const sendCartidgeMissedMsg = async (req, res) => {
 const MissedCartidgeLog = async (req, res) => {
   try {
 
-    const { customerId } = req.query; 
+    const { customerId , startDate, endDate } = req.query; 
 
-    const result = await getMissedCartidgeLog(customerId);
+    const result = await getMissedCartidgeLog(customerId,startDate, endDate);
 
     return successResponse(res, "get Misssed Cartidge Logs..", null, result);
 
