@@ -1,5 +1,6 @@
 const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
+const WareHouse = require("../models/wareHouseModel");
 const AdminOtp = require("../models/adminOTPModel");
 const { successResponse, errorResponse } = require("../config/response");
 const { ProductEnum } = require("../config/global");
@@ -27,7 +28,7 @@ module.exports.clearProducts = async (req, res) => {
 
 module.exports.manageProductStatus = async (req, res) => {
   try {
-    const { productId, productStatus, customerId } = req.body;
+    const { productId, productStatus, customerId, warehouseId } = req.body;
 
     if (!productId || !productStatus) {
       return errorResponse(
@@ -51,10 +52,8 @@ module.exports.manageProductStatus = async (req, res) => {
       return errorResponse(res, "Product not found", 404);
     }
 
-    if (
-      productStatus === ProductEnum.NEW ||
-      productStatus === ProductEnum.EXHAUSTED
-    ) {
+    if (productStatus === ProductEnum.EXHAUSTED) 
+    {
       await Customer.updateMany(
         { products: productId },
         { $pull: { products: productId } }
@@ -89,6 +88,32 @@ module.exports.manageProductStatus = async (req, res) => {
 
       return successResponse(res, "Product updated successfully", null, null);
     }
+
+    if (productStatus === ProductEnum.NEW) {
+      if (!warehouseId) {
+        return errorResponse(res, "Warehouse ID is required for 'new' status", 400);
+      }
+
+       // Remove from any customer
+       await Customer.updateMany(
+        { products: productId },
+        { $pull: { products: productId } }
+      );
+
+       // Attach to warehouse
+       const warehouse = await WareHouse.findById(warehouseId);
+       if (!warehouse) {
+         return errorResponse(res, "Warehouse not found", 404);
+       }
+
+       if (!warehouse.products.includes(productId)) {
+        warehouse.products.push(productId);
+        await warehouse.save();
+      }
+
+      return successResponse(res, "Product updated successfully", null, null);
+    }
+
   } catch (error) {
     return errorResponse(res, "Error updating product status", 500, error);
   }

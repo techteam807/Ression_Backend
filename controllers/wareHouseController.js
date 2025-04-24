@@ -19,6 +19,21 @@ const getAllWareHouses = async (req, res) => {
   }
 };
 
+const getWareHouseDropDown = async (req, res) => {
+  try {
+    const result = await WareHouseService.getWareHousesDropDown();
+
+    return successResponse(
+      res,
+      "WareHouses fetched successfully",
+      null,
+      result
+    );
+  } catch (error) {
+    return errorResponse(res, "Error fetching WareHouses", 500, error);
+  }
+};
+
 const getWareHousesByCode = async (req, res) => {
   try {
     const { wareHouse_code } = req.query;
@@ -127,4 +142,5 @@ module.exports = {
   createWareHouses,
   deleteWareHouses,
   scanMultipleProductsByCode,
+  getWareHouseDropDown,
 };

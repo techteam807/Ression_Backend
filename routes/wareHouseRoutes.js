@@ -5,6 +5,7 @@ const { createWareHouse } = require('../validations/wareHouseValidation');
 const router = express.Router();
 
 router.get('/',WareHouseController.getAllWareHouses);
+router.get('/dropDownofwareHouse',WareHouseController.getWareHouseDropDown);
 router.get('/code',WareHouseController.getWareHousesByCode);
 router.post('/',validateRequest(createWareHouse),WareHouseController.createWareHouses);
 router.delete('/delete/:id',WareHouseController.deleteWareHouses);

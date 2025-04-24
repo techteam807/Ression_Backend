@@ -20,6 +20,11 @@ const getWareHouses = async(filter = {}, search) => {
       return { wareHouse};
 };
 
+const getWareHousesDropDown = async() => {
+    return await WareHouseS.find().select("_id, wareHouseCode");
+    
+};
+
 const getwareHousesByCode = async(wareHouse_code) => {
     return await WareHouseS.findOne({wareHouseCode:wareHouse_code});
 };
@@ -185,6 +190,6 @@ const scanMultipleProducts = async (Product_Codes, wareHouse_code,userId) => {
     };
 };
 
-module.exports = { getWareHouses, getwareHousesByCode, createWareHouse, deleteWareHouse, scanMultipleProducts };
+module.exports = { getWareHouses, getWareHousesDropDown, getwareHousesByCode, createWareHouse, deleteWareHouse, scanMultipleProducts };
 
 

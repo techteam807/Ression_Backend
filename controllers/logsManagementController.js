@@ -103,10 +103,10 @@ exports.getLogsByUser = async (req, res) => {
   }
 };
 
-exports.get = async (req, res) => {
+exports.getTechnicianScore = async (req, res) => {
   try {
 
-    const {startDate, endDate, userId} = req.body;
+    const {startDate, endDate, userId} = req.query;
 
     const result = await logService.technicianScore(startDate, endDate, userId);
 
