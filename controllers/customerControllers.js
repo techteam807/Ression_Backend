@@ -6,6 +6,9 @@ const {
   fetchAndStoreCustomersWithRefresh,
   manageCustomerAndProduct,
   getCustomerDropdown,
+  getCustomerlocations,
+  sendCartidgeMissedMessage,
+  getMissedCartidgeLog,
 
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
@@ -96,13 +99,13 @@ const ManageCustomerAndProductsone = async(req, res) => {
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes, userId,geoCoordinates } = req.body;
+    const { customer_code, Product_Codes, userId,geoCoordinates,url } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates);
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url);
 
         // if (result.success) {
     //   return successResponse(res, result.message, null, null);
@@ -137,5 +140,49 @@ const getCustomerdropdown = async (req, res) => {
   }
 };
 
+const getCustomerlocation = async (req, res) => {
+  try{
+    const filter = { ...req.query };
+    const customers = await getCustomerlocations(filter);
 
-module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts };
+    return successResponse(res, "Customers fetched successfully", null, customers);
+  }catch(error){
+    return errorResponse(res, "Error fetching customer dropdown", 500, error);
+  }
+};
+
+const sendCartidgeMissedMsg = async (req, res) => {
+  try{
+     const customer_id = req.body.customer_id;
+     
+     const result = await sendCartidgeMissedMessage(customer_id);
+
+     if(result.success)
+    {
+      return successResponse(res, result.message, null, null);
+    }
+    else
+    {
+      return errorResponse(res, result.message, 500, null)
+    }
+  } catch (error) {
+    return errorResponse(res, "Error Sending Message", 500, error);
+}
+};
+
+const MissedCartidgeLog = async (req, res) => {
+  try {
+
+    const { customerId , startDate, endDate } = req.query; 
+
+    const result = await getMissedCartidgeLog(customerId,startDate, endDate);
+
+    return successResponse(res, "get Misssed Cartidge Logs..", null, result);
+
+  } catch (error) {
+return errorResponse(res, "Error while geting Logs", 500, error);
+  }
+};
+
+
+module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation, sendCartidgeMissedMsg, MissedCartidgeLog };

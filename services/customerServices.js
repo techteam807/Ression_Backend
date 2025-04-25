@@ -7,6 +7,9 @@ const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
+const puppeteer = require('puppeteer');
+const MissedCartidge = require('../models/missedCartidgeModel.js');
+const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -106,13 +109,31 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       "contact_number",
       "customer_name",
       "cf_cartridge_qty",
+      "cf_google_map_link"
     ];
+
 
     for (const zohoCustomer of zohoCustomers) {
       const existing = existingCustomerMap.get(zohoCustomer.customer_id);
 
       if (!existing) {
-        newCustomers.push(zohoCustomer);
+
+        if (zohoCustomer.cf_google_map_link) {
+          const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          if (coords) {
+            zohoCustomer.geoCoordinates = {
+              type: 'Point',
+              coordinates: [coords.lng, coords.lat]
+            };
+          }
+        }
+        console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
+        const newCustomer = new Customer({
+          ...zohoCustomer,
+          geoCoordinates: zohoCustomer.geoCoordinates || undefined, // manually add geoCoordinates
+        });
+        newCustomers.push(newCustomer);
       } else {
         let hasChanges = false;
 
@@ -127,15 +148,32 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
         }
 
         if (hasChanges) {
+          if (zohoCustomer.cf_google_map_link) {
+            const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+            if (coords) {
+              zohoCustomer.geoCoordinates = {
+                type: 'Point',
+                coordinates: [coords.lng, coords.lat]
+              };
+            }
+          }
+      
+          // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
+          console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
           updates.push({
             updateOne: {
               filter: { customer_id: zohoCustomer.customer_id },
-              update: { $set: zohoCustomer },
+              update: { $set:
+                {...zohoCustomer,geoCoordinates: zohoCustomer.geoCoordinates || undefined },
+              }
             },
           });
         }
       }
     }
+
+    // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates);
 
     if (newCustomers.length > 0) {
       await Customer.insertMany(newCustomers);
@@ -386,7 +424,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates,url) => {
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -412,6 +450,7 @@ if (errorMessages.length > 0) {
 }
 
   const customerEXHAUSTEDId = Customers.products;
+  console.log(customerEXHAUSTEDId)
   const rawMobile = Customers.mobile;
   const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
   const customerName = Customers.display_name;
@@ -527,7 +566,14 @@ if (errorMessages.length > 0) {
     await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
 
+    if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
+    {
+      await sendFirstTimeMsg(cutomerMobileNumber,url);
+    }
+    else
+    {
     await sendWhatsAppMsg(cutomerMobileNumber,customerName);
+    }
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
@@ -548,45 +594,6 @@ if (errorMessages.length > 0) {
   };
 };
 
-const sendWhatsAppMsg = async (mobile_number, name) => {
-  console.log(mobile_number,name);
-  return new Promise((resolve, reject) => {
-    const options = {
-      method: "POST",
-      url: process.env.GALLABOX_URL,
-      headers: {
-        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
-        apikey: process.env.GALLABOX_API_KEY, // lowercase
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        channelId: process.env.GALLABOX_CHANNEL_ID,
-        channelType: "whatsapp",
-        recipient: {
-          name: mobile_number,
-          phone: `91${mobile_number}`,
-        },
-        whatsapp: {
-          type: "template",
-          template: {
-            templateName: "bw_scan_app_utility2",
-            bodyValues: { name: name }, // Change from object to array
-          },
-        },
-      }),
-    };
-
-    request(options, (error, response) => {
-      if (error) {
-        console.error("Error sending WhatsApp Msg:", error);
-        return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
-      }
-      console.log("WhatsApp Message Sent:", response.body);
-      resolve({ success: true, message: "Msg sent successfully." });
-    });
-  });
-};
-
 const getCustomerDropdown = async (filter) => {
   try{
     return await Customer.find(filter)
@@ -595,6 +602,104 @@ const getCustomerDropdown = async (filter) => {
   }catch(error){
     throw new Error("Error in getCustomerDropdown:", error.message);
   }
+};
+
+const getCustomerlocations = async (filter) => {
+  try{
+    return await Customer.find(filter)
+    .select("_id display_name contact_number geoCoordinates").lean();
+
+  }catch(error){
+    throw new Error("Error in getCustomerDropdown:", error.message);
+  }
+};
+
+const getCoordinatesFromShortLink = async (shortUrl) => {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
+      await page.goto(shortUrl, { waitUntil: 'networkidle2' });
+
+      const currentUrl = page.url();
+      // console.log("Resolved URL:", currentUrl);
+
+      // Regex to extract coordinates from the URL
+      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = currentUrl.match(regex);
+
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+
+        // Log coordinates (you can store these in your model here)
+        console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
+        return { lat, lng };
+      } else {
+        console.log("Could not extract coordinates for:", shortUrl);
+        return null;
+      }
+    } else {
+      console.log("Invalid Google Maps link:", shortUrl);
+      return null;
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    return null;
+  } finally {
+    await browser.close();
+  }
+};
+
+const sendCartidgeMissedMessage = async (cust_id) => {
+  const customer = await Customer.findById(cust_id);
+
+  if(!customer)
+  {
+    return { success:false, message:`Customer Not Found With Id ${cust_id}`};
+  }
+
+  const Customer_Name = customer.display_name;
+  const Customer_Phone = customer.mobile;
+
+  await sendMissedCatridgeMsg(Customer_Phone, Customer_Name);
+  const MissedCartidgeLog = {
+    customerId:cust_id,
+  }
+  await MissedCartidge.create(MissedCartidgeLog);
+  return { success: true, message:"Message Sent.." }
+};
+
+const getMissedCartidgeLog = async (customerId, startDate, endDate) => {
+  const filter = {};
+
+  if(customerId)
+  {
+    filter.customerId = customerId;
+  }
+
+  
+  let start, end;
+
+  if (!startDate || !endDate) {
+    const now = new Date();
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+  } else {
+    start = new Date(startDate);
+    end = new Date (endDate);
+    end.setHours(23, 59, 59, 999);
+  }
+
+  filter.timestamp  = { $gte: start, $lte: end };
+
+  const getMissedCartidgeData = await MissedCartidge
+  .find(filter)
+  .sort({ timestamp : -1 }) // descending order
+  .populate('customerId', 'display_name contact_number first_name last_name mobile email');
+  return getMissedCartidgeData
 };
 
 module.exports = {
@@ -607,4 +712,7 @@ module.exports = {
   // replaceCustomersProductsNew,
   manageCustomerAndProduct,
   getCustomerDropdown,
+  getCustomerlocations,
+  sendCartidgeMissedMessage,
+  getMissedCartidgeLog
 };

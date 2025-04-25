@@ -47,9 +47,17 @@ const CustomerSchema = new mongoose.Schema(
     has_attachment: Boolean,
     contact_number: String,
     tags: [String],
+    cf_google_map_link:String,
+    geoCoordinates: {
+      type: { type: String, enum: ['Point']},
+      coordinates: { type: [Number] },// [longitude, latitude]  
+      default:{} 
+    }, 
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },
   { timestamps: true }
 );
+
+CustomerSchema.index({ geoCoordinates: "2dsphere" });
 
 module.exports = mongoose.model("Customer", CustomerSchema);

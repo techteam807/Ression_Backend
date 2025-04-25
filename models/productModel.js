@@ -19,6 +19,7 @@ const ProductSchema = new mongoose.Schema(
           enum: Object.values(ProductEnum),
           default: ProductEnum.NEW 
     },
+    productNotes:String,
   },
   { timestamps: true }
 );
