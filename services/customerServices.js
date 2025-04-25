@@ -682,19 +682,14 @@ const getMissedCartidgeLog = async (customerId, startDate, endDate) => {
   
   let start, end;
 
-  const parseDate = (dateStr) => {
-    const [day, month, year] = dateStr.split("-");
-    return new Date(`${year}-${month}-${day}`);
-  };
-
   if (!startDate || !endDate) {
     const now = new Date();
     start = new Date(now.getFullYear(), now.getMonth(), 1);
     end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     end.setHours(23, 59, 59, 999);
   } else {
-    start = parseDate(startDate);
-    end = parseDate(endDate);
+    start = new Date(startDate);
+    end = new Date (endDate);
     end.setHours(23, 59, 59, 999);
   }
 
