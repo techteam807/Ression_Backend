@@ -8,10 +8,14 @@ router.post("/zoho-customers",CustomerController.ZohoCustomers);
 router.post("/store-customers",CustomerController.storeCustomers);
 router.get("/",CustomerController.getCustomers);
 router.get("/customerDropdown",CustomerController.getCustomerdropdown);
+router.get("/customerLocation",CustomerController.getCustomerlocation);
 router.get('/code',validateRequest(getCustomerByCode),CustomerController.getCustomerByCode);
 // router.post('/manageProductsOld',validateRequest(manageProductsOld),CustomerController.ReplaceProductsOld);
 // router.post('/manageProductsNew',validateRequest(manageProductsNew),CustomerController.ReplaceProductsNew);
 router.post('/manageProducts',CustomerController.ManageCustomerAndProducts);
+router.post('/SendMissedCartidgeMsg',CustomerController.sendCartidgeMissedMsg);
+router.get('/missedCartidgeLog',CustomerController.MissedCartidgeLog);
+
 
 
 module.exports = router;

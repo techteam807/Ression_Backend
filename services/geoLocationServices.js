@@ -72,7 +72,7 @@ const getGeoLocations = async () => {
         results.push({
             customer: {
               id: customer._id,
-              name: customer.name,
+              name: customer.display_name,
               products
             },
             geoCoordinates: location.geoCoordinates
