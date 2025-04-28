@@ -8,6 +8,7 @@ const {
   getCustomerDropdown,
   getCustomerlocations,
   sendCartidgeMissedMessage,
+  getClusteredCustomerLocations,
   getMissedCartidgeLog,
 
 } = require("../services/customerServices");
@@ -151,6 +152,19 @@ const getCustomerlocation = async (req, res) => {
   }
 };
 
+const getClusteredCustomers = async (req, res) => {
+  try {
+    const numClusters = parseInt(req.query.numClusters) || 3;
+    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || null;
+
+    const clusteredCustomers = await getClusteredCustomerLocations(numClusters, maxCustomersPerCluster);
+
+    return successResponse(res, "Customers clustered successfully", null, clusteredCustomers);
+  } catch (error) {
+    return errorResponse(res, "Error clustering customers", 500, error.message || error);
+  }
+};
+
 const sendCartidgeMissedMsg = async (req, res) => {
   try{
      const customer_id = req.body.customer_id;
@@ -185,4 +199,4 @@ return errorResponse(res, "Error while geting Logs", 500, error);
 };
 
 
-module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation, sendCartidgeMissedMsg, MissedCartidgeLog };
+module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation, sendCartidgeMissedMsg, MissedCartidgeLog, getClusteredCustomers };

@@ -17,6 +17,7 @@
     "express": "^4.21.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "ml-kmeans": "^6.0.0",
     "moment-timezone": "^0.5.47",
     "mongodb": "^6.13.0",
     "mongoose": "^8.10.1",

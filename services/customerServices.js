@@ -9,6 +9,7 @@ const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
+const kmeans = require('ml-kmeans').default;
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
@@ -614,6 +615,201 @@ const getCustomerlocations = async (filter) => {
   }
 };
 
+  // const getClusteredCustomerLocations = async (numClusters, maxCustomersPerCluster) => {
+  //   try {
+  //     const customers = await Customer.find({})
+  //       .select("_id display_name contact_number geoCoordinates")
+  //       .lean();
+
+  //     // Filter out customers without geoCoordinates
+  //     const customersWithCoordinates = customers.filter(cust => 
+  //       cust.geoCoordinates && 
+  //       Array.isArray(cust.geoCoordinates.coordinates) && 
+  //       cust.geoCoordinates.coordinates.length === 2
+  //     );
+
+  //     const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
+
+  //     if (coordinates.length < numClusters) {
+  //       throw new Error(`Not enough customers with geoCoordinates to form ${numClusters} clusters.`);
+  //     }
+
+  //     // Initialize random centroids
+  //     let centroids = coordinates.slice(0, numClusters);
+
+  //     let assignments = new Array(coordinates.length).fill(-1);
+  //     let changed = true;
+  //     let iterations = 0;
+  //     const MAX_ITER = 100;
+
+  //     while (changed && iterations < MAX_ITER) {
+  //       changed = false;
+  //       iterations++;
+
+  //       // Assign points to nearest centroid
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const distances = centroids.map(c => distance(coordinates[i], c));
+  //         const nearestCentroid = distances.indexOf(Math.min(...distances));
+  //         if (assignments[i] !== nearestCentroid) {
+  //           changed = true;
+  //           assignments[i] = nearestCentroid;
+  //         }
+  //       }
+
+  //       // Recalculate centroids
+  //       const newCentroids = new Array(numClusters).fill(0).map(() => [0, 0]);
+  //       const counts = new Array(numClusters).fill(0);
+
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const cluster = assignments[i];
+  //         newCentroids[cluster][0] += coordinates[i][0];
+  //         newCentroids[cluster][1] += coordinates[i][1];
+  //         counts[cluster]++;
+  //       }
+
+  //       for (let j = 0; j < numClusters; j++) {
+  //         if (counts[j] > 0) {
+  //           newCentroids[j][0] /= counts[j];
+  //           newCentroids[j][1] /= counts[j];
+  //         }
+  //       }
+
+  //       centroids = newCentroids;
+  //     }
+
+  //     // Assign final clusters
+  //     const clusteredCustomers = customersWithCoordinates.map((cust, idx) => ({
+  //       ...cust,
+  //       cluster: assignments[idx]
+  //     }));
+
+  //     return clusteredCustomers;
+
+  //   } catch (error) {
+  //     console.log("error", error)
+  //     throw new Error("Error clustering customers: " + error.message);
+  //   }
+  // };
+
+
+  const getClusteredCustomerLocations = async (numClusters, maxCustomersPerCluster) => {
+    try {
+      const customers = await Customer.find({})
+        .select("_id display_name contact_number geoCoordinates")
+        .lean();
+  
+      const customersWithCoordinates = customers.filter(cust => 
+        cust.geoCoordinates &&
+        Array.isArray(cust.geoCoordinates.coordinates) &&
+        cust.geoCoordinates.coordinates.length === 2
+      );
+  
+      const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
+  
+      if (coordinates.length < numClusters) {
+        throw new Error(`Not enough customers with geoCoordinates to form ${numClusters} clusters.`);
+      }
+  
+      let centroids = coordinates.slice(0, numClusters);
+  
+      let assignments = new Array(coordinates.length).fill(-1);
+      let changed = true;
+      let iterations = 0;
+      const MAX_ITER = 100;
+  
+      while (changed && iterations < MAX_ITER) {
+        changed = false;
+        iterations++;
+  
+        for (let i = 0; i < coordinates.length; i++) {
+          const distances = centroids.map(c => distance(coordinates[i], c));
+          const nearestCentroid = distances.indexOf(Math.min(...distances));
+          if (assignments[i] !== nearestCentroid) {
+            changed = true;
+            assignments[i] = nearestCentroid;
+          }
+        }
+  
+        const newCentroids = new Array(numClusters).fill(0).map(() => [0, 0]);
+        const counts = new Array(numClusters).fill(0);
+  
+        for (let i = 0; i < coordinates.length; i++) {
+          const cluster = assignments[i];
+          newCentroids[cluster][0] += coordinates[i][0];
+          newCentroids[cluster][1] += coordinates[i][1];
+          counts[cluster]++;
+        }
+  
+        for (let j = 0; j < numClusters; j++) {
+          if (counts[j] > 0) {
+            newCentroids[j][0] /= counts[j];
+            newCentroids[j][1] /= counts[j];
+          }
+        }
+  
+        centroids = newCentroids;
+      }
+  
+      let clusteredCustomers = customersWithCoordinates.map((cust, idx) => ({
+        ...cust,
+        cluster: assignments[idx]
+      }));
+  
+      // --- New Part: Split large clusters ---
+      if (maxCustomersPerCluster) {
+        let finalClusters = [];
+        let clusterId = 0;
+  
+        const grouped = {};
+  
+        // Group customers by cluster
+        clusteredCustomers.forEach(cust => {
+          if (!grouped[cust.cluster]) grouped[cust.cluster] = [];
+          grouped[cust.cluster].push(cust);
+        });
+  
+        for (const clusterKey in grouped) {
+          const clusterCustomers = grouped[clusterKey];
+  
+          if (clusterCustomers.length <= maxCustomersPerCluster) {
+            clusterCustomers.forEach(cust => {
+              cust.cluster = clusterId;
+            });
+            finalClusters.push(...clusterCustomers);
+            clusterId++;
+          } else {
+            // If cluster too big, split into chunks
+            for (let i = 0; i < clusterCustomers.length; i += maxCustomersPerCluster) {
+              const chunk = clusterCustomers.slice(i, i + maxCustomersPerCluster);
+              chunk.forEach(cust => {
+                cust.cluster = clusterId;
+              });
+              finalClusters.push(...chunk);
+              clusterId++;
+            }
+          }
+        }
+  
+        clusteredCustomers = finalClusters;
+      }
+  
+      return clusteredCustomers;
+  
+    } catch (error) {
+      console.log("error", error)
+      throw new Error("Error clustering customers: " + error.message);
+    }
+  };
+
+  
+// Helper function to calculate distance between two points
+function distance(p1, p2) {
+  const dx = p1[0] - p2[0];
+  const dy = p1[1] - p2[1];
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+
 const getCoordinatesFromShortLink = async (shortUrl) => {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
@@ -713,6 +909,7 @@ module.exports = {
   manageCustomerAndProduct,
   getCustomerDropdown,
   getCustomerlocations,
+  getClusteredCustomerLocations,
   sendCartidgeMissedMessage,
   getMissedCartidgeLog
 };
