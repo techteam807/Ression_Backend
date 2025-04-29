@@ -8,8 +8,6 @@ const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 // const puppeteer = require('puppeteer');
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
@@ -37,6 +35,17 @@ const getAccessToken = async () => {
     return null;
   }
 };
+
+const getCoordinatesFromShortLink = async (shortUrl) => {
+  try {
+    const res = await axios.post('https://ression-backend-geo.vercel.app/get-coordinates', { url: shortUrl });
+    return res.data; // { lat, lng }
+  } catch (err) {
+    console.error(`Failed to get coordinates for ${shortUrl}:`, err.response?.data || err.message);
+    return null;
+  }
+};
+
 
 //refresh customer
 const fetchAndStoreCustomersWithRefreshOld = async (accessToken) => {
@@ -616,49 +625,43 @@ const getCustomerlocations = async (filter) => {
   }
 };
 
-const getCoordinatesFromShortLink = async (shortUrl) => {
-  // const browser = await puppeteer.launch({ headless: true });
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-  });
-  const page = await browser.newPage();
+// const getCoordinatesFromShortLink = async (shortUrl) => {
+//   const browser = await puppeteer.launch({ headless: true });
+//   const page = await browser.newPage();
 
-  try {
-    if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
-      await page.goto(shortUrl, { waitUntil: 'networkidle2', timeout:0 });
+//   try {
+//     if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
+//       await page.goto(shortUrl, { waitUntil: 'networkidle2' });
 
-      const currentUrl = page.url();
-      // console.log("Resolved URL:", currentUrl);
+//       const currentUrl = page.url();
+//       // console.log("Resolved URL:", currentUrl);
 
-      // Regex to extract coordinates from the URL
-      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-      const match = currentUrl.match(regex);
+//       // Regex to extract coordinates from the URL
+//       const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+//       const match = currentUrl.match(regex);
 
-      if (match) {
-        const lat = parseFloat(match[1]);
-        const lng = parseFloat(match[2]);
+//       if (match) {
+//         const lat = parseFloat(match[1]);
+//         const lng = parseFloat(match[2]);
 
-        // Log coordinates (you can store these in your model here)
-        console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
-        return { lat, lng };
-      } else {
-        console.log("Could not extract coordinates for:", shortUrl);
-        return null;
-      }
-    } else {
-      console.log("Invalid Google Maps link:", shortUrl);
-      return null;
-    }
-  } catch (err) {
-    console.error("Error:", err);
-    return null;
-  } finally {
-    await browser.close();
-  }
-};
+//         // Log coordinates (you can store these in your model here)
+//         console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
+//         return { lat, lng };
+//       } else {
+//         console.log("Could not extract coordinates for:", shortUrl);
+//         return null;
+//       }
+//     } else {
+//       console.log("Invalid Google Maps link:", shortUrl);
+//       return null;
+//     }
+//   } catch (err) {
+//     console.error("Error:", err);
+//     return null;
+//   } finally {
+//     await browser.close();
+//   }
+// };
 
 const sendCartidgeMissedMessage = async (cust_id) => {
   const customer = await Customer.findById(cust_id);
