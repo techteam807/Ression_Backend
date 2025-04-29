@@ -8,8 +8,8 @@ const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 // const puppeteer = require('puppeteer');
-const puppeteer = require('puppeteer-core'); // Use puppeteer-core to avoid downloading Chromium
-const chrome = require('chrome-aws-lambda');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
@@ -617,8 +617,13 @@ const getCustomerlocations = async (filter) => {
 };
 
 const getCoordinatesFromShortLink = async (shortUrl) => {
-  const browser = await puppeteer.launch({ executablePath: await chrome.executablePath, args: chrome.args,                           // Use chrome-aws-lambda's args
-    headless: chrome.headless  });
+  // const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
+    args: chromium.args,
+    headless: chromium.headless,
+    defaultViewport: chromium.defaultViewport,
+  });
   const page = await browser.newPage();
 
   try {
