@@ -11,5 +11,11 @@
   ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
-  }
+  },
+  "functions": {
+    "index.js": {
+        "maxDuration": 30,
+        "memory": 1024
+      }
+    }
 }
