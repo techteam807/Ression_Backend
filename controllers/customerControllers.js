@@ -10,6 +10,8 @@ const {
   sendCartidgeMissedMessage,
   getClusteredCustomerLocations,
   getMissedCartidgeLog,
+  getAllClusters,
+  reassignMultipleCustomersToClusters,
 
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
@@ -154,16 +156,41 @@ const getCustomerlocation = async (req, res) => {
 
 const getClusteredCustomers = async (req, res) => {
   try {
-    const numClusters = parseInt(req.query.numClusters) || 3;
-    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || null;
+    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || 15;
 
-    const clusteredCustomers = await getClusteredCustomerLocations(numClusters, maxCustomersPerCluster);
+    const clusteredCustomers = await getClusteredCustomerLocations(maxCustomersPerCluster);
 
     return successResponse(res, "Customers clustered successfully", null, clusteredCustomers);
   } catch (error) {
     return errorResponse(res, "Error clustering customers", 500, error.message || error);
   }
 };
+
+const getClusters = async (req, res) => {
+  try {
+    const clusters = await getAllClusters();
+
+    return successResponse(res, "Clusters fetched successfully", null, clusters);
+  } catch (error) {
+    return errorResponse(res, "Failed to fetch clusters", 500, error.message || error);
+  }
+};
+
+const reassignMultipleCustomers = async (req, res) => {
+  try {
+    const { reassignments } = req.body;
+
+    if (!Array.isArray(reassignments)) {
+      return errorResponse(res, "Reassignments array is required.", 400); 
+    }
+
+    await reassignMultipleCustomersToClusters(reassignments);
+    return successResponse(res, 200, "Customers reassigned successfully.");
+  } catch (error) {
+    return errorResponse(res, 500, error.message);
+  }
+};
+
 
 const sendCartidgeMissedMsg = async (req, res) => {
   try{
@@ -199,4 +226,4 @@ return errorResponse(res, "Error while geting Logs", 500, error);
 };
 
 
-module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation, sendCartidgeMissedMsg, MissedCartidgeLog, getClusteredCustomers };
+module.exports = { getCustomerdropdown, storeCustomers, getCustomers, getCustomerByCode,  ZohoCustomers, ManageCustomerAndProducts, getCustomerlocation, sendCartidgeMissedMsg, MissedCartidgeLog, getClusteredCustomers, getClusters, reassignMultipleCustomers };

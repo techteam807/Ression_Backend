@@ -10,6 +10,8 @@ router.get("/",CustomerController.getCustomers);
 router.get("/customerDropdown",CustomerController.getCustomerdropdown);
 router.get("/customerLocation",CustomerController.getCustomerlocation);
 router.get('/customerLocationCluster', CustomerController.getClusteredCustomers);
+router.get('/clusters', CustomerController.getClusters);
+router.put("/clusters/reassign-batch", CustomerController.reassignMultipleCustomers);
 router.get('/code',validateRequest(getCustomerByCode),CustomerController.getCustomerByCode);
 // router.post('/manageProductsOld',validateRequest(manageProductsOld),CustomerController.ReplaceProductsOld);
 // router.post('/manageProductsNew',validateRequest(manageProductsNew),CustomerController.ReplaceProductsNew);

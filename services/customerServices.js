@@ -1,6 +1,7 @@
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const Cluster = require("../models/clusterModel.js");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
@@ -615,84 +616,7 @@ const getCustomerlocations = async (filter) => {
   }
 };
 
-  // const getClusteredCustomerLocations = async (numClusters, maxCustomersPerCluster) => {
-  //   try {
-  //     const customers = await Customer.find({})
-  //       .select("_id display_name contact_number geoCoordinates")
-  //       .lean();
-
-  //     // Filter out customers without geoCoordinates
-  //     const customersWithCoordinates = customers.filter(cust => 
-  //       cust.geoCoordinates && 
-  //       Array.isArray(cust.geoCoordinates.coordinates) && 
-  //       cust.geoCoordinates.coordinates.length === 2
-  //     );
-
-  //     const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
-
-  //     if (coordinates.length < numClusters) {
-  //       throw new Error(`Not enough customers with geoCoordinates to form ${numClusters} clusters.`);
-  //     }
-
-  //     // Initialize random centroids
-  //     let centroids = coordinates.slice(0, numClusters);
-
-  //     let assignments = new Array(coordinates.length).fill(-1);
-  //     let changed = true;
-  //     let iterations = 0;
-  //     const MAX_ITER = 100;
-
-  //     while (changed && iterations < MAX_ITER) {
-  //       changed = false;
-  //       iterations++;
-
-  //       // Assign points to nearest centroid
-  //       for (let i = 0; i < coordinates.length; i++) {
-  //         const distances = centroids.map(c => distance(coordinates[i], c));
-  //         const nearestCentroid = distances.indexOf(Math.min(...distances));
-  //         if (assignments[i] !== nearestCentroid) {
-  //           changed = true;
-  //           assignments[i] = nearestCentroid;
-  //         }
-  //       }
-
-  //       // Recalculate centroids
-  //       const newCentroids = new Array(numClusters).fill(0).map(() => [0, 0]);
-  //       const counts = new Array(numClusters).fill(0);
-
-  //       for (let i = 0; i < coordinates.length; i++) {
-  //         const cluster = assignments[i];
-  //         newCentroids[cluster][0] += coordinates[i][0];
-  //         newCentroids[cluster][1] += coordinates[i][1];
-  //         counts[cluster]++;
-  //       }
-
-  //       for (let j = 0; j < numClusters; j++) {
-  //         if (counts[j] > 0) {
-  //           newCentroids[j][0] /= counts[j];
-  //           newCentroids[j][1] /= counts[j];
-  //         }
-  //       }
-
-  //       centroids = newCentroids;
-  //     }
-
-  //     // Assign final clusters
-  //     const clusteredCustomers = customersWithCoordinates.map((cust, idx) => ({
-  //       ...cust,
-  //       cluster: assignments[idx]
-  //     }));
-
-  //     return clusteredCustomers;
-
-  //   } catch (error) {
-  //     console.log("error", error)
-  //     throw new Error("Error clustering customers: " + error.message);
-  //   }
-  // };
-
-
-  const getClusteredCustomerLocations = async (numClusters, maxCustomersPerCluster) => {
+  const getClusteredCustomerLocations = async (maxCustomersPerCluster = 15) => {
     try {
       const customers = await Customer.find({})
         .select("_id display_name contact_number geoCoordinates")
@@ -705,10 +629,18 @@ const getCustomerlocations = async (filter) => {
       );
   
       const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
-  
-      if (coordinates.length < numClusters) {
-        throw new Error(`Not enough customers with geoCoordinates to form ${numClusters} clusters.`);
-      }
+
+       const total = coordinates.length;
+
+    if (total === 0) {
+      throw new Error("No customers with valid geoCoordinates.");
+    }
+
+     const numClusters = Math.ceil(total / maxCustomersPerCluster);
+
+    if (numClusters <= 0) {
+      throw new Error("Invalid number of clusters.");
+    }
   
       let centroids = coordinates.slice(0, numClusters);
   
@@ -792,6 +724,21 @@ const getCustomerlocations = async (filter) => {
   
         clusteredCustomers = finalClusters;
       }
+
+      await Cluster.deleteMany({});
+
+      const clusterMap = {};
+      for (const cust of clusteredCustomers) {
+        if (!clusterMap[cust.cluster]) clusterMap[cust.cluster] = [];
+        clusterMap[cust.cluster].push(cust._id);
+      }
+  
+      for (const clusterKey in clusterMap) {
+        await Cluster.create({
+          clusterNo: parseInt(clusterKey),
+          customers: clusterMap[clusterKey],
+        });
+      }  
   
       return clusteredCustomers;
   
@@ -801,13 +748,232 @@ const getCustomerlocations = async (filter) => {
     }
   };
 
+  // const getClusteredCustomerLocations = async (maxCustomersPerCluster = 15) => {
+  //   try {
+  //     const customers = await Customer.find({})
+  //       .select("_id display_name contact_number geoCoordinates")
+  //       .lean();
   
-// Helper function to calculate distance between two points
-function distance(p1, p2) {
+  //     // Filter out customers without geoCoordinates
+  //     const customersWithCoordinates = customers.filter(cust => 
+  //       cust.geoCoordinates && 
+  //       Array.isArray(cust.geoCoordinates.coordinates) && 
+  //       cust.geoCoordinates.coordinates.length === 2
+  //     );
+  
+  //     const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
+  
+  //          const total = coordinates.length;
+
+  //   if (total === 0) {
+  //     throw new Error("No customers with valid geoCoordinates.");
+  //   }
+
+  //    const numClusters = Math.ceil(total / maxCustomersPerCluster);
+
+  //   if (numClusters <= 0) {
+  //     throw new Error("Invalid number of clusters.");
+  //   }
+  
+  //     // Initialize random centroids
+  //     let centroids = coordinates.slice(0, numClusters);
+  
+  //     let assignments = new Array(coordinates.length).fill(-1);
+  //     let changed = true;
+  //     let iterations = 0;
+  //     const MAX_ITER = 100;
+  
+  //     while (changed && iterations < MAX_ITER) {
+  //       changed = false;
+  //       iterations++;
+  
+  //       // Assign points to nearest centroid
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const distances = centroids.map(c => distance(coordinates[i], c));
+  //         const nearestCentroid = distances.indexOf(Math.min(...distances));
+  //         if (assignments[i] !== nearestCentroid) {
+  //           changed = true;
+  //           assignments[i] = nearestCentroid;
+  //         }
+  //       }
+  
+  //       // Recalculate centroids
+  //       const newCentroids = new Array(numClusters).fill(0).map(() => [0, 0]);
+  //       const counts = new Array(numClusters).fill(0);
+  
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const cluster = assignments[i];
+  //         newCentroids[cluster][0] += coordinates[i][0];
+  //         newCentroids[cluster][1] += coordinates[i][1];
+  //         counts[cluster]++;
+  //       }
+  
+  //       for (let j = 0; j < numClusters; j++) {
+  //         if (counts[j] > 0) {
+  //           newCentroids[j][0] /= counts[j];
+  //           newCentroids[j][1] /= counts[j];
+  //         }
+  //       }
+  
+  //       centroids = newCentroids;
+  //     }
+  
+  //     // Assign final clusters
+  //     const clusteredCustomers = customersWithCoordinates.map((cust, idx) => ({
+  //       ...cust,
+  //       cluster: assignments[idx]
+  //     }));
+
+  //      await Cluster.deleteMany({});
+
+  //     const clusterMap = {};
+  //     for (const cust of clusteredCustomers) {
+  //       if (!clusterMap[cust.cluster]) clusterMap[cust.cluster] = [];
+  //       clusterMap[cust.cluster].push(cust._id);
+  //     }
+  
+  //     for (const clusterKey in clusterMap) {
+  //       await Cluster.create({
+  //         clusterNo: parseInt(clusterKey),
+  //         customers: clusterMap[clusterKey],
+  //       });
+  //     } 
+  
+  //     return clusteredCustomers;
+  
+  //   } catch (error) {
+  //     console.log("error", error)
+  //     throw new Error("Error clustering customers: " + error.message);
+  //   }
+  // };
+
+
+  // const getClusteredCustomerLocations = async (numClusters, maxCustomersPerCluster) => {
+  //   try {
+  //     const customers = await Customer.find({})
+  //       .select("_id display_name contact_number geoCoordinates")
+  //       .lean();
+
+  //     // Filter out customers without geoCoordinates
+  //     const customersWithCoordinates = customers.filter(cust => 
+  //       cust.geoCoordinates && 
+  //       Array.isArray(cust.geoCoordinates.coordinates) && 
+  //       cust.geoCoordinates.coordinates.length === 2
+  //     );
+
+  //     const coordinates = customersWithCoordinates.map(cust => cust.geoCoordinates.coordinates);
+
+  //     if (coordinates.length < numClusters) {
+  //       throw new Error(`Not enough customers with geoCoordinates to form ${numClusters} clusters.`);
+  //     }
+
+  //     // Initialize random centroids
+  //     let centroids = coordinates.slice(0, numClusters);
+
+  //     let assignments = new Array(coordinates.length).fill(-1);
+  //     let changed = true;
+  //     let iterations = 0;
+  //     const MAX_ITER = 100;
+
+  //     while (changed && iterations < MAX_ITER) {
+  //       changed = false;
+  //       iterations++;
+
+  //       // Assign points to nearest centroid
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const distances = centroids.map(c => distance(coordinates[i], c));
+  //         const nearestCentroid = distances.indexOf(Math.min(...distances));
+  //         if (assignments[i] !== nearestCentroid) {
+  //           changed = true;
+  //           assignments[i] = nearestCentroid;
+  //         }
+  //       }
+
+  //       // Recalculate centroids
+  //       const newCentroids = new Array(numClusters).fill(0).map(() => [0, 0]);
+  //       const counts = new Array(numClusters).fill(0);
+
+  //       for (let i = 0; i < coordinates.length; i++) {
+  //         const cluster = assignments[i];
+  //         newCentroids[cluster][0] += coordinates[i][0];
+  //         newCentroids[cluster][1] += coordinates[i][1];
+  //         counts[cluster]++;
+  //       }
+
+  //       for (let j = 0; j < numClusters; j++) {
+  //         if (counts[j] > 0) {
+  //           newCentroids[j][0] /= counts[j];
+  //           newCentroids[j][1] /= counts[j];
+  //         }
+  //       }
+
+  //       centroids = newCentroids;
+  //     }
+
+  //     // Assign final clusters
+  //     const clusteredCustomers = customersWithCoordinates.map((cust, idx) => ({
+  //       ...cust,
+  //       cluster: assignments[idx]
+  //     }));
+
+  //     return clusteredCustomers;
+
+  //   } catch (error) {
+  //     console.log("error", error)
+  //     throw new Error("Error clustering customers: " + error.message);
+  //   }
+  // };
+
+  function distance(p1, p2) {
   const dx = p1[0] - p2[0];
   const dy = p1[1] - p2[1];
   return Math.sqrt(dx * dx + dy * dy);
 }
+
+const getAllClusters = async () => {
+  try {
+    const clusters = await Cluster.find()
+      .populate("customers", "display_name contact_number geoCoordinates")
+      .lean();
+
+    return clusters;
+  } catch (error) {
+    throw new Error("Failed to fetch clusters: " + error.message);
+  }
+};
+
+const reassignMultipleCustomersToClusters = async (reassignments) => {
+  const bulkPullOps = reassignments.map(({ customerId }) => ({
+    updateMany: {
+      filter: { customers: customerId },
+      update: { $pull: { customers: customerId } }
+    }
+  }));
+
+  // Remove customers from any existing clusters
+  await Cluster.bulkWrite(bulkPullOps);
+
+  // Prepare a map of clusterNo => customerIds[]
+  const clusterMap = {};
+  for (const { customerId, newClusterNo } of reassignments) {
+    if (!clusterMap[newClusterNo]) clusterMap[newClusterNo] = [];
+    clusterMap[newClusterNo].push(customerId);
+  }
+
+  // For each clusterNo, push customers (create if not exists)
+  for (const [clusterNo, customerIds] of Object.entries(clusterMap)) {
+    const cluster = await Cluster.findOne({ clusterNo: Number(clusterNo) });
+    if (cluster) {
+      cluster.customers.push(...customerIds);
+      await cluster.save();
+    } else {
+      await Cluster.create({
+        clusterNo: Number(clusterNo),
+        customers: customerIds
+      });
+    }
+  }
+};
 
 
 const getCoordinatesFromShortLink = async (shortUrl) => {
@@ -911,5 +1077,7 @@ module.exports = {
   getCustomerlocations,
   getClusteredCustomerLocations,
   sendCartidgeMissedMessage,
-  getMissedCartidgeLog
+  getMissedCartidgeLog,
+  reassignMultipleCustomersToClusters,
+  getAllClusters
 };
