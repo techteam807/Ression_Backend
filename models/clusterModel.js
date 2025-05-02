@@ -6,6 +6,9 @@ const ClusterSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    cartridge_qty: {
+      type: Number,
+    },
     customers: [
       {
         type: mongoose.Schema.Types.ObjectId,
