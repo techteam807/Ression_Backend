@@ -1,5 +1,6 @@
 const Customer = require("../models/customerModel");
 const Cluster = require("../models/clusterModel.js");
+const mongoose = require('mongoose');
 
 const distance = (coord1, coord2) => {
     const dx = coord1[0] - coord2[0];
@@ -20,12 +21,14 @@ const distance = (coord1, coord2) => {
     
         // Track current state of each cluster
         const existingClusterUsage = {};
-        for (let i = 0; i < 6; i++) {
-            const clusterData = allClusters.find(c => c.clusterNo === i);
-            existingClusterUsage[i] = {
+        let numClusters = allClusters.length || 6;
+
+         for (let i = 0; i < numClusters; i++) {
+          const clusterData = allClusters.find(c => c.clusterNo === i);
+          existingClusterUsage[i] = {
             customers: clusterData ? [...clusterData.customers.map(c => c.toString())] : [],
             totalCartridge: clusterData ? clusterData.cartridge_qty || 0 : 0
-            };
+          };
         }
     
         // Filter only new customers not yet in any cluster
@@ -41,7 +44,7 @@ const distance = (coord1, coord2) => {
         }
     
         const coordinates = newCustomers.map(c => c.geoCoordinates.coordinates);
-        const numClusters = 6;
+        // const numClusters = 2;
     
         // Step 2: Initialize centroids from first N new customers
         let centroids = coordinates.slice(0, numClusters);
@@ -113,34 +116,42 @@ const distance = (coord1, coord2) => {
             }
     
             if (!assigned) {
-            console.warn(`Customer ${cust._id} could not be assigned due to all clusters being full.`);
+              // Create new cluster dynamically
+              const newClusterNo = numClusters++;
+              existingClusterUsage[newClusterNo] = {
+                customers: [cust._id.toString()],
+                totalCartridge: cartridge
+              };
+              centroids.push(coord); // Add centroid for new cluster
+              assignedCustomers.push({ ...cust, cluster: newClusterNo });
+              console.log(`Created new cluster ${newClusterNo} for customer ${cust._id}`);
             }
-        }
+          }
     
-        // Step 4: Save updated clusters
-        for (let clusterNo = 0; clusterNo < numClusters; clusterNo++) {
-            const clusterData = allClusters.find(c => c.clusterNo === clusterNo);
+          for (let clusterNo in existingClusterUsage) {
+            clusterNo = parseInt(clusterNo);
             const usage = existingClusterUsage[clusterNo];
-    
+            const clusterData = allClusters.find(c => c.clusterNo === clusterNo);
+      
             if (clusterData) {
-            clusterData.customers = usage.customers.map(id => id); // Replace with updated list
-            clusterData.cartridge_qty = usage.totalCartridge;
-            await Cluster.findByIdAndUpdate(clusterData._id, clusterData);
+              clusterData.customers = usage.customers;
+              clusterData.cartridge_qty = usage.totalCartridge;
+              await Cluster.findByIdAndUpdate(clusterData._id, clusterData);
             } else {
-            await Cluster.create({
+              await Cluster.create({
                 clusterNo,
                 customers: usage.customers,
                 cartridge_qty: usage.totalCartridge,
-            });
+              });
             }
-        }
-    
-        return assignedCustomers;
+          }
+      
+          return assignedCustomers;
         } catch (error) {
-        console.error("Clustering Error:", error);
-        throw new Error(error.message);
+          console.error("Clustering Error:", error);
+          throw new Error(error.message);
         }
-    };
+      };
   
 const getAllClusters = async () => {
   try {
@@ -154,38 +165,116 @@ const getAllClusters = async () => {
   }
 };
 
+// const reassignMultipleCustomersToClusters = async (reassignments) => {
+//   const bulkPullOps = reassignments.map(({ customerId }) => ({
+//     updateMany: {
+//       filter: { customers: customerId },
+//       update: { $pull: { customers: customerId } }
+//     }
+//   }));
+
+//   // Remove customers from any existing clusters
+//   await Cluster.bulkWrite(bulkPullOps);
+
+//   // Prepare a map of clusterNo => customerIds[]
+//   const clusterMap = {};
+//   for (const { customerId, newClusterNo } of reassignments) {
+//     if (!clusterMap[newClusterNo]) clusterMap[newClusterNo] = [];
+//     clusterMap[newClusterNo].push(customerId);
+//   }
+
+//   // For each clusterNo, push customers (create if not exists)
+//   for (const [clusterNo, customerIds] of Object.entries(clusterMap)) {
+//     const cluster = await Cluster.findOne({ clusterNo: Number(clusterNo) });
+//     if (cluster) {
+//       cluster.customers.push(...customerIds);
+//       await cluster.save();
+//     } else {
+//       await Cluster.create({
+//         clusterNo: Number(clusterNo),
+//         customers: customerIds
+//       });
+//     }
+//   }
+// };
+
 const reassignMultipleCustomersToClusters = async (reassignments) => {
-  const bulkPullOps = reassignments.map(({ customerId }) => ({
-    updateMany: {
-      filter: { customers: customerId },
-      update: { $pull: { customers: customerId } }
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const MAX_CUSTOMERS = 20;
+    const MAX_CARTRIDGES = 24;
+
+    // Step 1: Fetch all customers involved
+    const customerIds = reassignments.map(r => r.customerId);
+    const customers = await Customer.find({ _id: { $in: customerIds } }).session(session).lean();
+    const customerMap = new Map(customers.map(c => [c._id.toString(), c]));
+
+    // Step 2: Remove customers from any existing clusters and adjust cartridge qty
+    for (const { customerId } of reassignments) {
+      const customer = customerMap.get(customerId);
+      const cartridgeQty = parseFloat(customer.cf_cartridge_qty) || 0;
+
+      // Remove from any cluster where the customer exists
+      const clustersWithCustomer = await Cluster.find({ customers: customerId }).session(session);
+
+      for (const cluster of clustersWithCustomer) {
+        cluster.customers.pull(customerId);
+        cluster.cartridge_qty = Math.max(0, (cluster.cartridge_qty || 0) - cartridgeQty);
+        await cluster.save({ session });
+      }
     }
-  }));
 
-  // Remove customers from any existing clusters
-  await Cluster.bulkWrite(bulkPullOps);
-
-  // Prepare a map of clusterNo => customerIds[]
-  const clusterMap = {};
-  for (const { customerId, newClusterNo } of reassignments) {
-    if (!clusterMap[newClusterNo]) clusterMap[newClusterNo] = [];
-    clusterMap[newClusterNo].push(customerId);
-  }
-
-  // For each clusterNo, push customers (create if not exists)
-  for (const [clusterNo, customerIds] of Object.entries(clusterMap)) {
-    const cluster = await Cluster.findOne({ clusterNo: Number(clusterNo) });
-    if (cluster) {
-      cluster.customers.push(...customerIds);
-      await cluster.save();
-    } else {
-      await Cluster.create({
-        clusterNo: Number(clusterNo),
-        customers: customerIds
-      });
+    // Step 3: Prepare new assignments grouped by cluster
+    const clusterMap = {};
+    for (const { customerId, newClusterNo } of reassignments) {
+      if (!clusterMap[newClusterNo]) clusterMap[newClusterNo] = [];
+      clusterMap[newClusterNo].push(customerId);
     }
+
+    // Step 4: Assign to new clusters with validations
+    for (const [clusterNoStr, customerIds] of Object.entries(clusterMap)) {
+      const clusterNo = Number(clusterNoStr);
+      const customerObjs = customerIds.map(id => customerMap.get(id));
+      const totalNewCartridges = customerObjs.reduce((sum, c) => sum + (parseFloat(c.cf_cartridge_qty) || 0), 0);
+
+      let cluster = await Cluster.findOne({ clusterNo }).session(session);
+
+      const currentCustomerCount = cluster ? cluster.customers.length : 0;
+      const currentCartridgeQty = cluster ? cluster.cartridge_qty || 0 : 0;
+
+      if ((currentCustomerCount + customerIds.length) > MAX_CUSTOMERS) {
+        throw new Error(`Cluster ${clusterNo} would exceed customer limit`);
+      }
+
+      if ((currentCartridgeQty + totalNewCartridges) > MAX_CARTRIDGES) {
+        throw new Error(`Cluster ${clusterNo} would exceed cartridge limit`);
+      }
+
+      if (cluster) {
+        cluster.customers.push(...customerIds);
+        cluster.cartridge_qty += totalNewCartridges;
+        await cluster.save({ session });
+      } else {
+        await Cluster.create([{
+          clusterNo,
+          customers: customerIds,
+          cartridge_qty: totalNewCartridges
+        }], { session });
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new Error(error.message);
   }
 };
+
+
 
 module.exports = {
     reassignMultipleCustomersToClusters,

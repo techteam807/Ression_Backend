@@ -120,16 +120,16 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
 
       if (!existing) {
 
-        if (zohoCustomer.cf_google_map_link) {
-          const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
-          if (coords) {
-            zohoCustomer.geoCoordinates = {
-              type: 'Point',
-              coordinates: [coords.lng, coords.lat]
-            };
-          }
-        }
-        console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+        // if (zohoCustomer.cf_google_map_link) {
+        //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+        //   if (coords) {
+        //     zohoCustomer.geoCoordinates = {
+        //       type: 'Point',
+        //       coordinates: [coords.lng, coords.lat]
+        //     };
+        //   }
+        // }
+        // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
 
         const newCustomer = new Customer({
           ...zohoCustomer,
@@ -150,18 +150,18 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
         }
 
         if (hasChanges) {
-          if (zohoCustomer.cf_google_map_link) {
-            const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
-            if (coords) {
-              zohoCustomer.geoCoordinates = {
-                type: 'Point',
-                coordinates: [coords.lng, coords.lat]
-              };
-            }
-          }
+          // if (zohoCustomer.cf_google_map_link) {
+          //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          //   if (coords) {
+          //     zohoCustomer.geoCoordinates = {
+          //       type: 'Point',
+          //       coordinates: [coords.lng, coords.lat]
+          //     };
+          //   }
+          // }
       
-          // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
-          console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+          // // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
+          // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
 
           updates.push({
             updateOne: {
