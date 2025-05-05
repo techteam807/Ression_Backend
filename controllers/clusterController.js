@@ -36,7 +36,8 @@ const reassignMultipleCustomers = async (req, res) => {
     await reassignMultipleCustomersToClusters(reassignments);
     return successResponse(res, "Customers reassigned successfully");
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    console.log("Hello", error.message)
+    return errorResponse(res, error.message || error, 500);
   }
 };
 
