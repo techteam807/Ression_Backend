@@ -7,7 +7,7 @@ const Log = require("../services/logManagementService.js");
 const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
-// const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
@@ -35,17 +35,6 @@ const getAccessToken = async () => {
     return null;
   }
 };
-
-const getCoordinatesFromShortLink = async (shortUrl) => {
-  try {
-    const res = await axios.post('https://ression-backend-geo.vercel.app/get-coordinates', { url: shortUrl });
-    return res.data; // { lat, lng }
-  } catch (err) {
-    console.error(`Failed to get coordinates for ${shortUrl}:`, err.response?.data || err.message);
-    return null;
-  }
-};
-
 
 //refresh customer
 const fetchAndStoreCustomersWithRefreshOld = async (accessToken) => {
@@ -129,16 +118,16 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
 
       if (!existing) {
 
-        if (zohoCustomer.cf_google_map_link) {
-          const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
-          if (coords) {
-            zohoCustomer.geoCoordinates = {
-              type: 'Point',
-              coordinates: [coords.lng, coords.lat]
-            };
-          }
-        }
-        console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+        // if (zohoCustomer.cf_google_map_link) {
+        //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+        //   if (coords) {
+        //     zohoCustomer.geoCoordinates = {
+        //       type: 'Point',
+        //       coordinates: [coords.lng, coords.lat]
+        //     };
+        //   }
+        // }
+        // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
 
         const newCustomer = new Customer({
           ...zohoCustomer,
@@ -159,18 +148,18 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
         }
 
         if (hasChanges) {
-          if (zohoCustomer.cf_google_map_link) {
-            const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
-            if (coords) {
-              zohoCustomer.geoCoordinates = {
-                type: 'Point',
-                coordinates: [coords.lng, coords.lat]
-              };
-            }
-          }
+          // if (zohoCustomer.cf_google_map_link) {
+          //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          //   if (coords) {
+          //     zohoCustomer.geoCoordinates = {
+          //       type: 'Point',
+          //       coordinates: [coords.lng, coords.lat]
+          //     };
+          //   }
+          // }
       
-          // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
-          console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+          // // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
+          // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
 
           updates.push({
             updateOne: {
@@ -625,43 +614,43 @@ const getCustomerlocations = async (filter) => {
   }
 };
 
-// const getCoordinatesFromShortLink = async (shortUrl) => {
-//   const browser = await puppeteer.launch({ headless: true });
-//   const page = await browser.newPage();
+const getCoordinatesFromShortLink = async (shortUrl) => {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
 
-//   try {
-//     if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
-//       await page.goto(shortUrl, { waitUntil: 'networkidle2' });
+  try {
+    if (shortUrl && shortUrl.startsWith("https://maps.app.goo.gl")) {
+      await page.goto(shortUrl, { waitUntil: 'networkidle2' });
 
-//       const currentUrl = page.url();
-//       // console.log("Resolved URL:", currentUrl);
+      const currentUrl = page.url();
+      // console.log("Resolved URL:", currentUrl);
 
-//       // Regex to extract coordinates from the URL
-//       const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-//       const match = currentUrl.match(regex);
+      // Regex to extract coordinates from the URL
+      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = currentUrl.match(regex);
 
-//       if (match) {
-//         const lat = parseFloat(match[1]);
-//         const lng = parseFloat(match[2]);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
 
-//         // Log coordinates (you can store these in your model here)
-//         console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
-//         return { lat, lng };
-//       } else {
-//         console.log("Could not extract coordinates for:", shortUrl);
-//         return null;
-//       }
-//     } else {
-//       console.log("Invalid Google Maps link:", shortUrl);
-//       return null;
-//     }
-//   } catch (err) {
-//     console.error("Error:", err);
-//     return null;
-//   } finally {
-//     await browser.close();
-//   }
-// };
+        // Log coordinates (you can store these in your model here)
+        console.log(`Coordinates for ${shortUrl}: Latitude: ${lat}, Longitude: ${lng}`);
+        return { lat, lng };
+      } else {
+        console.log("Could not extract coordinates for:", shortUrl);
+        return null;
+      }
+    } else {
+      console.log("Invalid Google Maps link:", shortUrl);
+      return null;
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    return null;
+  } finally {
+    await browser.close();
+  }
+};
 
 const sendCartidgeMissedMessage = async (cust_id) => {
   const customer = await Customer.findById(cust_id);
