@@ -302,6 +302,7 @@ if(userId)
     let dateRangeStart = null;
     let dateRangeEnd = null;
     let technicianName = "";
+    let totalAdjustedTime = 0
 
     for (const date in techLogs) {
       const timestamps = techLogs[date].replacements;
@@ -346,6 +347,9 @@ if(userId)
         console.log("t:",totalScore);
         scoreCount++;
         console.log("sc:",scoreCount);
+
+        totalAdjustedTime += adjustedTime; // Accumulate adjusted time
+
         
       }
 
@@ -358,12 +362,15 @@ if(userId)
     }
 
     const avgScore = totalScore / scoreCount;
+    const avgTimePerReplacement = totalAdjustedTime / scoreCount;
+
 
     finalResult.push({
       technician_id:techId,
       technician: technicianName,
       totalReplacements,
       averageEfficiencyScore: parseFloat(avgScore.toFixed(2)),
+      averageReplacementTime: parseFloat(avgTimePerReplacement.toFixed(2))
     });
 
     finalResult.sort((a, b) => b.averageEfficiencyScore - a.averageEfficiencyScore);
