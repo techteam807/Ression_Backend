@@ -8,7 +8,7 @@ const distance = (coord1, coord2) => {
     return Math.sqrt(dx * dx + dy * dy);
   };
   
-    const getClusteredCustomerLocations = async (maxCustomersPerCluster = 20, maxCartridgeQty = 24) => {
+    const getClusteredCustomerLocations = async (maxCustomersPerCluster = 15, maxCartridgeQty = 20) => {
         try {
         const customers = await Customer.find({})
             .select("_id display_name contact_number geoCoordinates cf_cartridge_qty")
