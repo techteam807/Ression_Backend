@@ -1,6 +1,8 @@
 const Customer = require("../models/customerModel");
 const Cluster = require("../models/clusterModel.js");
 const mongoose = require('mongoose');
+const { WeekdayEnum } = require("../config/global");
+// const { DBSCAN } = require("ml-dbscan");
 
 const distance = (coord1, coord2) => {
     const dx = coord1[0] - coord2[0];
@@ -8,7 +10,7 @@ const distance = (coord1, coord2) => {
     return Math.sqrt(dx * dx + dy * dy);
   };
   
-    const getClusteredCustomerLocations = async (maxCustomersPerCluster = 20, maxCartridgeQty = 24) => {
+    const getClusteredCustomerLocations = async (maxCustomersPerCluster = 15, maxCartridgeQty = 20) => {
         try {
         const customers = await Customer.find({})
             .select("_id display_name contact_number geoCoordinates cf_cartridge_qty")
@@ -274,10 +276,31 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
   }
 };
 
+const assignTechnicianToClusterService = async ({ clusterNo, technicianId, day }) => {
+  if (!Object.values(WeekdayEnum).includes(day.toLowerCase())) {
+    throw new Error("Invalid day value.");
+  }
+
+  const cluster = await Cluster.findOne({ clusterNo });
+
+  if (!cluster) {
+    throw new Error(`Cluster ${clusterNo} not found.`);
+  }
+
+  cluster.technicianId = technicianId;
+  cluster.day = day.toLowerCase();
+
+  await cluster.save();
+
+  return cluster;
+};
+
+
 
 
 module.exports = {
     reassignMultipleCustomersToClusters,
     getAllClusters,
-    getClusteredCustomerLocations
+    getClusteredCustomerLocations,
+    assignTechnicianToClusterService
 }

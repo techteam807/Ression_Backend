@@ -1,16 +1,15 @@
 
 const { successResponse, errorResponse } = require("../config/response");
-const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters } = require("../services/clusterService");
+const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters, assignTechnicianToClusterService } = require("../services/clusterService");
 
 const getClusteredCustomers = async (req, res) => {
   try {
-    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || 20;
+    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || 15;
 
     const clusteredCustomers = await getClusteredCustomerLocations(maxCustomersPerCluster);
 
     return successResponse(res, "Customers clustered successfully", null, clusteredCustomers);
   } catch (error) {
-    console.log("Hello", error.message)
     return errorResponse(res, error.message || error, 500);
   }
 };
@@ -36,9 +35,35 @@ const reassignMultipleCustomers = async (req, res) => {
     await reassignMultipleCustomersToClusters(reassignments);
     return successResponse(res, "Customers reassigned successfully");
   } catch (error) {
-    console.log("Hello", error.message)
     return errorResponse(res, error.message || error, 500);
   }
 };
 
-module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers }
+const assignTechnicianToCluster = async (req, res) => {
+  try {
+    const { assignments } = req.body;
+    console.log("req.body", req.body)
+
+    if (!assignments || assignments.length === 0) {
+      return errorResponse(res, "Assignments array is required.", 400);
+    }
+
+    const updatedClusters = [];
+    for (const { clusterNo, technicianId, day } of assignments) {
+      if (clusterNo === undefined || !technicianId || !day) {
+        return errorResponse(res, "clusterNo, technicianId, and day are required.", 400);
+      }
+
+      const updatedCluster = await assignTechnicianToClusterService({ clusterNo, technicianId, day });
+      updatedClusters.push(updatedCluster);
+    }
+
+    return successResponse(res, "Technician and day assigned successfully", null, updatedClusters);
+  } catch (error) {
+    return errorResponse(res, error.message || error, 500);
+  }
+};
+
+
+
+module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers, assignTechnicianToCluster }

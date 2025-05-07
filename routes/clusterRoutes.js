@@ -5,5 +5,7 @@ const router = express.Router();
 router.get('/customerLocationCluster', ClusterController.getClusteredCustomers);
 router.get('/clusters', ClusterController.getClusters);
 router.put("/clusters/reassign-batch", ClusterController.reassignMultipleCustomers);
+router.put("/assign-technician", ClusterController.assignTechnicianToCluster);
+
 
 module.exports = router;
