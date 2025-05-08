@@ -1,6 +1,7 @@
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const Cluster = require("../models/clusterModel.js");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
@@ -9,6 +10,7 @@ const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
 const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
+const kmeans = require('ml-kmeans').default;
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
@@ -613,6 +615,9 @@ const getCustomerlocations = async (filter) => {
     throw new Error("Error in getCustomerDropdown:", error.message);
   }
 };
+
+
+
 
 const getCoordinatesFromShortLink = async (shortUrl) => {
   const browser = await puppeteer.launch({ headless: true });
