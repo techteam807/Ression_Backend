@@ -8,7 +8,10 @@ const {
   getCustomerDropdown,
   getCustomerlocations,
   sendCartidgeMissedMessage,
+  getClusteredCustomerLocations,
   getMissedCartidgeLog,
+  getAllClusters,
+  reassignMultipleCustomersToClusters,
 
 } = require("../services/customerServices");
 const { successResponse, errorResponse } = require("../config/response");
