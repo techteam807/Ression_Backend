@@ -201,7 +201,7 @@ module.exports.manageProductCode = async (req, res) => {
       productNotes:`Product Code Update: ${oldProduct.productCode} to ${NewproductCode} `
     }
     await Log.createLog(genrateLogForProductsUpdate)
-  return successResponse(res, "Product updated successfully", null, null);
+  return successResponse(res, "Product Code updated successfully", null, null);
   }
   catch (error)
   {
