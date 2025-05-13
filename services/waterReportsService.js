@@ -1,55 +1,55 @@
 const Reports = require("../models/waterReports");
 const Customers = require("../models/customerModel");
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-const { PDFDocument } = require('pdf-lib');
-const fs = require('fs');
-const path = require('path');
+// const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
+// const { PDFDocument } = require('pdf-lib');
+// const fs = require('fs');
+// const path = require('path');
 const { sendWaterReportPdf } = require("./whatsappMsgServices");
 
-const chartWidth = 600;
-const chartHeight = 400;
-const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: chartWidth, height: chartHeight });
+// const chartWidth = 600;
+// const chartHeight = 400;
+// const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: chartWidth, height: chartHeight });
 
 // Generate one chart PDF for a batch of reports
-const generatePDFForBatch = async (batchReports, customerId, index) => {
-  const labels = batchReports.map(r => new Date(r.createdAt).toLocaleDateString());
-  const scores = batchReports.map(r => parseFloat(r.waterScore));
+// const generatePDFForBatch = async (batchReports, customerId, index) => {
+//   const labels = batchReports.map(r => new Date(r.createdAt).toLocaleDateString());
+//   const scores = batchReports.map(r => parseFloat(r.waterScore));
 
-  const chartBuffer = await chartJSNodeCanvas.renderToBuffer({
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Water Score',
-        data: scores,
-        backgroundColor: 'rgba(0, 123, 255, 0.6)'
-      }]
-    },
-    options: {
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  });
+//   const chartBuffer = await chartJSNodeCanvas.renderToBuffer({
+//     type: 'bar',
+//     data: {
+//       labels,
+//       datasets: [{
+//         label: 'Water Score',
+//         data: scores,
+//         backgroundColor: 'rgba(0, 123, 255, 0.6)'
+//       }]
+//     },
+//     options: {
+//       scales: {
+//         y: { beginAtZero: true }
+//       }
+//     }
+//   });
 
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([chartWidth, chartHeight + 50]);
-  const image = await pdfDoc.embedPng(chartBuffer);
+//   const pdfDoc = await PDFDocument.create();
+//   const page = pdfDoc.addPage([chartWidth, chartHeight + 50]);
+//   const image = await pdfDoc.embedPng(chartBuffer);
 
-  page.drawImage(image, {
-    x: 0,
-    y: 50,
-    width: chartWidth,
-    height: chartHeight
-  });
+//   page.drawImage(image, {
+//     x: 0,
+//     y: 50,
+//     width: chartWidth,
+//     height: chartHeight
+//   });
 
-  const pdfBytes = await pdfDoc.save();
-  const fileName = `water-report-${customerId}-batch${index + 1}.pdf`;
-  const filePath = path.join(__dirname, '../reports', fileName);
-  fs.writeFileSync(filePath, pdfBytes);
+//   const pdfBytes = await pdfDoc.save();
+//   const fileName = `water-report-${customerId}-batch${index + 1}.pdf`;
+//   const filePath = path.join(__dirname, '../reports', fileName);
+//   fs.writeFileSync(filePath, pdfBytes);
 
-  return fileName;
-};
+//   return fileName;
+// };
 
 const createReports = async (reportsData) => {
   return await Reports.create(reportsData);
@@ -86,7 +86,7 @@ const generateWaterReports = async(customerId) => {
     console.log(reportIds)
 
     const batches = [];
-    const generatedFiles = [];
+    // const generatedFiles = [];
 
     for (let i = 0; i + 3 < reportIds.length; i += 4) {
         const batch = reportIds.slice(i, i + 4);
@@ -97,10 +97,10 @@ const generateWaterReports = async(customerId) => {
       }
          });
 
-         const batchReports = await Reports.find({ _id: { $in: batch } });
+        //  const batchReports = await Reports.find({ _id: { $in: batch } });
 
-    const fileName = await generatePDFForBatch(batchReports, customerId, batches.length - 1);
-    generatedFiles.push(fileName);
+    // const fileName = await generatePDFForBatch(batchReports, customerId, batches.length - 1);
+    // generatedFiles.push(fileName);
     }
 
     if (batches.length > 0) {
