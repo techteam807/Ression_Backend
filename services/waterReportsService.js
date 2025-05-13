@@ -56,16 +56,22 @@ const createReports = async (reportsData) => {
 };
 
 const getReports = async (year, month, filter = {}) => {
-  if (year) {
+  if (year && month) {
+    filter.$expr = {
+      $and: [
+        { $eq: [{ $year: "$createdAt" }, year] },
+        { $eq: [{ $month: "$createdAt" }, month] }
+      ]
+    };
+  } else if (year) {
     filter.$expr = { $eq: [{ $year: "$createdAt" }, year] };
+  } else if (month) {
+    filter.$expr = { $eq: [{ $month: "$createdAt" }, month] };
   }
 
-  if (month) {
-    filter.$expr = { $eq: [{ $year: "$createdAt" }, month] };
-  }
-
-  return await Reports.find(filter).populate('customerId', 'display_name');;
+  return await Reports.find(filter).populate('customerId', 'display_name');
 };
+
 
 const generateWaterReports = async(customerId) => {
     const reports = await Reports.find({ customerId, status: false });
