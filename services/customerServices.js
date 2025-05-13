@@ -456,7 +456,7 @@ if (errorMessages.length > 0) {
   const customerEXHAUSTEDId = Customers.products;
   console.log(customerEXHAUSTEDId)
   const rawMobile = Customers.mobile;
-  const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
   const customerName = Customers.display_name;
   // Validate Products
   const foundProductCodes = ProductS.map((p) => p.productCode);
@@ -578,11 +578,11 @@ if (errorMessages.length > 0) {
 
     // if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
     // {
-    //   await sendFirstTimeMsg(cutomerMobileNumber,url);
+    //   await sendFirstTimeMsg(customerMobileNumber,url);
     // }
     // else
     // {
-    // await sendWhatsAppMsg(cutomerMobileNumber,customerName);
+    // await sendWhatsAppMsg(customerMobileNumber,customerName);
     // }
 
     messages.push(
