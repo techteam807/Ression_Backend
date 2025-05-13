@@ -207,6 +207,12 @@ const associateProductWithCustomer = async (customerId, productId) => {
     return await ProductS.find({productCode: {$in:product_codes}});
   };
 
+  // const getMultipleProductByCode = async (product_codes, session = null) => {
+  //   const query = ProductS.find({ productCode: { $in: product_codes } });
+  //   if (session) query.session(session);
+  //   return await query.exec();
+  // };
+  
   const uploadProducts = async(products) => {
     const insertedProducts = [];
     const duplicateProductCodes = [];
