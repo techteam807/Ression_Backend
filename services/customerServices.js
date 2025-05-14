@@ -576,14 +576,14 @@ if (errorMessages.length > 0) {
     await Log.createLog(genrateLogForIN_USE);
     await Report.createReports(generateReports);
 
-    // if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
-    // {
-    //   await sendFirstTimeMsg(customerMobileNumber,url);
-    // }
-    // else
-    // {
-    // await sendWhatsAppMsg(customerMobileNumber,customerName);
-    // }
+    if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
+    {
+      await sendFirstTimeMsg(customerMobileNumber,url);
+    }
+    else
+    {
+    await sendWhatsAppMsg(customerMobileNumber,customerName);
+    }
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
