@@ -6,5 +6,6 @@ router.put('/clearProductOfCutomer',SuperAdmin.clearProducts);
 router.patch('/manage-product-status', SuperAdmin.manageProductStatus);
 router.post('/sendOtpProductDelete',SuperAdmin.sendOtpForDeleteProduct);
 router.post('/productDeleteProcess',SuperAdmin.deleteProductProcess);
+router.put('/productCodeUpdate',SuperAdmin.manageProductCode);
 
 module.exports = router;

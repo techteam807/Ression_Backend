@@ -10,6 +10,8 @@ const WareHouseRoutes = require('./wareHouseRoutes');
 const SuperAdmin = require('./superAdminRoute');
 const LogsManagement = require('./logsManagementRoutes');
 const Location = require('./geoLocationRoutes');
+const WaterReport = require('./waterReportsRoutes');
+
 
 //allow to use your route files
 router.use('/customers',CustomerRoutes);
@@ -20,5 +22,6 @@ router.use('/wareHouse',WareHouseRoutes);
 router.use('/admin',SuperAdmin)
 router.use('/logsManagement',LogsManagement);
 router.use('/location',Location);
+router.use('/waterReport',WaterReport);
 
 module.exports = router;

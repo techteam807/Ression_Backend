@@ -5,6 +5,7 @@ const Cluster = require("../models/clusterModel.js");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
 const Log = require("../services/logManagementService.js");
+const Report = require('../services/waterReportsService.js');
 const ProductService = require("../services/productService");
 const request = require("request");
 const geoLocation = require("../services/geoLocationServices.js");
@@ -12,6 +13,7 @@ const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
 const kmeans = require('ml-kmeans').default;
 const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
+const { default: mongoose } = require("mongoose");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 
@@ -426,7 +428,7 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates,url) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates,url,score) => {
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -454,7 +456,7 @@ if (errorMessages.length > 0) {
   const customerEXHAUSTEDId = Customers.products;
   console.log(customerEXHAUSTEDId)
   const rawMobile = Customers.mobile;
-  const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
   const customerName = Customers.display_name;
   // Validate Products
   const foundProductCodes = ProductS.map((p) => p.productCode);
@@ -563,19 +565,25 @@ if (errorMessages.length > 0) {
       products:NewProducts.map((p) => p.id),
       userId:userId,
       status:ProductEnum.IN_USE,
-    }
+    };
+
+    const generateReports = {
+      customerId:CustomerId,
+      waterScore:score
+    };
 
     await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
+    await Report.createReports(generateReports);
 
-    if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
-    {
-      await sendFirstTimeMsg(cutomerMobileNumber,url);
-    }
-    else
-    {
-    await sendWhatsAppMsg(cutomerMobileNumber,customerName);
-    }
+    // if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
+    // {
+    //   await sendFirstTimeMsg(customerMobileNumber,url);
+    // }
+    // else
+    // {
+    // await sendWhatsAppMsg(customerMobileNumber,customerName);
+    // }
 
     messages.push(
       `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
