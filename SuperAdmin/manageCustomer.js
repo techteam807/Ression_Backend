@@ -1,10 +1,12 @@
 const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
 const AdminOtp = require("../models/adminOTPModel");
+const Log =  require('../services/logManagementService');
 const { successResponse, errorResponse } = require("../config/response");
 const { ProductEnum } = require("../config/global");
 const { deleteProduct } = require("../services/productService");
 const { sendWhatsAppOtp } = require("../services/userServices");
+const { sendWhatsAppMsg } = require("../services/whatsappMsgServices");
 
 module.exports.clearProducts = async (req, res) => {
   try {
@@ -32,7 +34,7 @@ module.exports.manageProductStatus = async (req, res) => {
     if (!productId || !productStatus) {
       return errorResponse(
         res,
-        "Product ID and Product Status are required",
+        "Product ID and Product Status is required",
         400
       );
     }
@@ -60,6 +62,15 @@ module.exports.manageProductStatus = async (req, res) => {
         { $pull: { products: productId } }
       );
 
+      const genrateLogForProducts = 
+      {
+        products:productId,
+        status:productStatus,
+        productNotes:'Managed By Admin'
+      };
+      await Log.createLog(genrateLogForProducts);
+
+      
       return successResponse(res, "Product updated successfully", null, null);
     }
 
@@ -86,6 +97,19 @@ module.exports.manageProductStatus = async (req, res) => {
         customer.products.push(productId);
         await customer.save();
       }
+
+      const customerName = customer.display_name;
+      const rawMobile = customer.mobile;
+      const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+      const genrateLogForIN_USE = 
+      {
+        customerId:customerId,
+        products:productId,
+        status:ProductEnum.IN_USE,
+        productNotes:'Managed By Admin'
+      };
+      await sendWhatsAppMsg(cutomerMobileNumber,customerName);
+      await Log.createLog(genrateLogForIN_USE);
 
       return successResponse(res, "Product updated successfully", null, null);
     }
@@ -145,6 +169,50 @@ module.exports.deleteProductProcess = async (req, res) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+module.exports.manageProductCode = async (req, res) => {
+  try
+  {
+    const {productId , NewproductCode } = req.body;
+
+    if (!productId || !NewproductCode) {
+      return errorResponse(
+        res,
+        "Product ID and New Product Code is required",
+        400
+      );
+    }
+
+    const oldProduct = await Product.findById(productId);
+    if (!oldProduct) {
+      return errorResponse(res, "Product not found", 404);
+    }
+
+    const updateProduct = await Product.findByIdAndUpdate(
+      productId,
+      { productCode:NewproductCode},
+      { new: true }
+    );
+
+    const genrateLogForProductsUpdate = {
+      products:productId,
+      status:oldProduct.productStatus,
+      productNotes:`Product Code Update: ${oldProduct.productCode} to ${NewproductCode} `
+    }
+    await Log.createLog(genrateLogForProductsUpdate)
+  return successResponse(res, "Product Code updated successfully", null, null);
+  }
+  catch (error)
+  {
+    return errorResponse(
+      res,
+      error.message.includes("E11000")
+        ? "Product code must be unique"
+        : error.message,
+      400
+    );
   }
 };
 
