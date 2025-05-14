@@ -198,6 +198,7 @@ module.exports.manageProductCode = async (req, res) => {
 
     const genrateLogForProductsUpdate = {
       products:productId,
+      status:oldProduct.productStatus,
       productNotes:`Product Code Update: ${oldProduct.productCode} to ${NewproductCode} `
     }
     await Log.createLog(genrateLogForProductsUpdate)
