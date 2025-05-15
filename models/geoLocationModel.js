@@ -7,9 +7,16 @@ const GeoLocationSchema = new mongoose.Schema({
         coordinates: { type: [Number] },// [longitude, latitude]  
         default:{} 
       },
+    MaingeoCoordinates: {
+        type: { type: String, enum: ['Point']},
+        coordinates: { type: [Number] },// [longitude, latitude]  
+        default:{} 
+      },
 },
 { timestamps: true }
 );
 
 GeoLocationSchema.index({ geoCoordinates: "2dsphere" });
+GeoLocationSchema.index({ MaingeoCoordinates: "2dsphere" });
+
 module.exports = mongoose.model('geoLocation', GeoLocationSchema);
