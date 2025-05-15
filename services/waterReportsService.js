@@ -73,7 +73,7 @@ const getReports = async (year, month, filter = {}) => {
 };
 
 
-const generateWaterReports = async(customerId) => {
+const generateWaterReportsOld = async(customerId) => {
     const reports = await Reports.find({ customerId, status: false });
 
     const customer = await Customers.findById(customerId);
@@ -118,5 +118,39 @@ const generateWaterReports = async(customerId) => {
     pdfFiles: generatedFiles,
   };
 };
+
+const generateWaterReports = async (customerId, logIds) => {
+  const reports = await Reports.find({
+    customerId,
+    status: false,
+    _id: { $in: logIds }
+  });
+
+  const customer = await Customers.findById(customerId);
+  const rawMobile = customer.mobile;
+  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerName = customer.display_name;
+
+  const reportIds = reports.map(r => r._id);
+
+  if (reportIds.length > 0) {
+    await Reports.updateMany(
+      { _id: { $in: reportIds } },
+      { $set: { status: true } }
+    );
+  }
+
+  const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`;
+
+  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
+
+  return {
+    customerId,
+    totalReportsFound: reportIds.length,
+    reportsUpdated: reportIds.length,
+    updatedReportIds: reportIds,
+  };
+};
+
 
 module.exports = { createReports, getReports, generateWaterReports };
