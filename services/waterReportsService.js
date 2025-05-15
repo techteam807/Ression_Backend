@@ -140,9 +140,9 @@ const generateWaterReports = async (customerId, logIds) => {
     );
   }
 
-  const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`;
+  // const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`;
 
-  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
+  // await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
 
   return {
     customerId,
