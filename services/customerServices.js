@@ -567,14 +567,17 @@ if (errorMessages.length > 0) {
       status:ProductEnum.IN_USE,
     };
 
-    const generateReports = {
+    await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
+    await Log.createLog(genrateLogForIN_USE);
+    
+    if(score)
+    {
+      const generateReports = {
       customerId:CustomerId,
       waterScore:score
     };
-
-    await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
-    await Log.createLog(genrateLogForIN_USE);
     await Report.createReports(generateReports);
+  };
 
     if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
     {
