@@ -22,7 +22,7 @@ const getWaterReports = async (req, res) => {
   }
 };
 
-const generatWatereReports = async (req, res) => {
+const generatWatereReportsold = async (req, res) => {
 try{
 
     const {customerId} = req.query;
@@ -39,6 +39,28 @@ catch (error) {
     return errorResponse(res, "Error fetching Water Reports", 500, error);
 }
 };
+
+const generatWatereReports = async (req, res) => {
+  try {
+    const { customerId, logIds } = req.body;
+
+    if (!customerId || !Array.isArray(logIds) || logIds.length === 0) {
+      return errorResponse(res, "customerId and logIds[] are required", 400);
+    }
+
+    const result = await WaterReportService.generateWaterReports(customerId, logIds);
+
+    return successResponse(
+      res,
+      "Water Reports generated successfully",
+      null,
+      result
+    );
+  } catch (error) {
+    return errorResponse(res, "Error generating Water Reports", 500, error);
+  }
+};
+
 
 
 module.exports = { getWaterReports, generatWatereReports };
