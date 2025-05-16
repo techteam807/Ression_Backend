@@ -105,35 +105,65 @@ const storeGeoLocation = async (customerId, geoCoordinates) => {
 //   }
 // };
 
-const getGeoLocations = async () => {
-    const geoLocations = await GeoLocation.find();
+// const getGeoLocations = async () => {
+//     const geoLocations = await GeoLocation.find();
 
-    const results= [];
+//     const results= [];
 
-    for (const location of geoLocations) {
-        const customer = await Customers.findById(location.customerId);
+//     for (const location of geoLocations) {
+//         const customer = await Customers.findById(location.customerId);
 
-        if (!customer) continue;
+//         if (!customer) continue;
   
-        const products = await Products.find({
-          _id: { $in: customer.products }
-        }).select("_id productCode status");
+//         const products = await Products.find({
+//           _id: { $in: customer.products }
+//         }).select("_id productCode status");
 
-        results.push({
-            customer: {
-              id: customer._id,
-              name: customer.display_name,
-              products
-            },
-            geoCoordinates: location.geoCoordinates
-          });
-    }
+//         results.push({
+//             customer: {
+//               id: customer._id,
+//               name: customer.display_name,
+//               products
+//             },
+//             geoCoordinates: location.geoCoordinates
+//           });
+//     }
 
-    return {
-        status: true,
-        message:"get all products locations",
-        data: results
-      };
-}
+//     return {
+//         status: true,
+//         message:"get all products locations",
+//         data: results
+//       };
+// }
+
+const getGeoLocations = async () => {
+  const geoLocations = await GeoLocation.find()
+    .populate({
+      path: "customerId",
+      select: "display_name products",
+      populate: {
+        path: "products",
+        select: "productCode status"
+      }
+    });
+
+  const results = geoLocations
+    .filter(loc => loc.customerId) // Ensure customer still exists
+    .map(loc => ({
+      customer: {
+        id: loc.customerId._id,
+        name: loc.customerId.display_name,
+        products: loc.customerId.products
+      },
+      geoCoordinates: loc.geoCoordinates
+    }));
+
+  return {
+    status: true,
+    message: "get all products locations",
+    data: results
+  };
+};
+
 
 module.exports = {storeGeoLocation, getGeoLocations};
