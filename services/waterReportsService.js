@@ -140,9 +140,10 @@ const generateWaterReports = async (customerId, logIds) => {
     );
   }
 
-  // const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`;
+  const docUrl = `https://drive.google.com/file/d/1fDKbJ84RL53Cz--5FnvVCFE3lqtm_jgW/view?usp=sharing`;
+  // https://drive.google.com/file/d/1fDKbJ84RL53Cz--5FnvVCFE3lqtm_jgW/view?usp=sharing
 
-  // await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
+  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
 
   return {
     customerId,
