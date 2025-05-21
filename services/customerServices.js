@@ -12,7 +12,7 @@ const geoLocation = require("../services/geoLocationServices.js");
 const puppeteer = require('puppeteer');
 const MissedCartidge = require('../models/missedCartidgeModel.js');
 const kmeans = require('ml-kmeans').default;
-const {sendMissedCatridgeMsg,sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
+const { sendMissedCatridgeMsg, sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 const { default: mongoose } = require("mongoose");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
@@ -161,15 +161,16 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
           //     };
           //   }
           // }
-      
+
           // // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
           // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
 
           updates.push({
             updateOne: {
               filter: { customer_id: zohoCustomer.customer_id },
-              update: { $set:
-                {...zohoCustomer,geoCoordinates: zohoCustomer.geoCoordinates || undefined },
+              update: {
+                $set:
+                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined },
               }
             },
           });
@@ -242,17 +243,17 @@ const fetchAndStoreCustomers = async (accessToken) => {
 const getAllcustomers = async (search, page, limit) => {
   let filter = search
     ? {
-        $or: [
-          { customer_name: new RegExp(search, "i") },
-          { display_name: new RegExp(search, "i") },
-          { company_name: new RegExp(search, "i") },
-          { first_name: new RegExp(search, "i") },
-          { last_name: new RegExp(search, "i") },
-          { email: new RegExp(search, "i") },
-          { website: new RegExp(search, "i") },
-          {contact_number:new RegExp(search, "i")},
-        ],
-      }
+      $or: [
+        { customer_name: new RegExp(search, "i") },
+        { display_name: new RegExp(search, "i") },
+        { company_name: new RegExp(search, "i") },
+        { first_name: new RegExp(search, "i") },
+        { last_name: new RegExp(search, "i") },
+        { email: new RegExp(search, "i") },
+        { website: new RegExp(search, "i") },
+        { contact_number: new RegExp(search, "i") },
+      ],
+    }
     : {};
 
   const options = {
@@ -261,7 +262,7 @@ const getAllcustomers = async (search, page, limit) => {
   };
 
   const customers = await Customer.find(filter)
-  // .select("_id display_name contact_number")
+    // .select("_id display_name contact_number")
     .skip(options.skip)
     .limit(options.limit);
   const totalRecords = await Customer.countDocuments(filter);
@@ -290,7 +291,7 @@ const getCustomerBycode = async (customer_code) => {
   if (!customer) return null;
 
   const customerData = customer.toObject();
-  
+
   customerData.cartridgeNum = Number(customerData.cf_cartridge_qty);
 
   return customerData;
@@ -301,7 +302,7 @@ const manageCustomerAndProductOLd = async (customer_code, product_code) => {
 
   if (!Customer) {
     return {
-      error:  new Error(`Customer not found with ${customer_code}`),
+      error: new Error(`Customer not found with ${customer_code}`),
       statusCode: 404,
     };
   }
@@ -325,15 +326,14 @@ const manageCustomerAndProductOLd = async (customer_code, product_code) => {
 
     if (!Products) {
       return {
-        error:  new Error(`Product not found with ${product_code}`),
+        error: new Error(`Product not found with ${product_code}`),
         statusCode: 404,
       };
     }
-    
-    if(!Products.isActive)
-    {
+
+    if (!Products.isActive) {
       return {
-        error:  new Error(`Product not Active ${product_code}`),
+        error: new Error(`Product not Active ${product_code}`),
         statusCode: 404,
       };
     }
@@ -356,19 +356,17 @@ const manageCustomerAndProductOLd = async (customer_code, product_code) => {
 const manageCustomerAndProductOne = async (customer_code, product_code) => {
 
   //customer_code
-  if(customer_code && product_code)
-  {
+  if (customer_code && product_code) {
     const Customer = await getCustomerBycode(customer_code);
     const ProductS = await ProductService.getProductBycode(product_code);
 
     if (!Customer) {
       return {
-        error:  new Error(`Customer not found with ${customer_code}`),
+        error: new Error(`Customer not found with ${customer_code}`),
         statusCode: 404,
       };
     }
-    else
-    {
+    else {
       Customer.products = Customer.products || [];
       const CustomerproductIds = Customer.products.map((product) => product._id);
 
@@ -382,76 +380,70 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
       }
     }
 
-    if(!ProductS)
-      {
+    if (!ProductS) {
+      return {
+        error: new Error(`Product Not Found With Code : ${product_code}`),
+        statusCode: 404,
+      };
+    }
+    else {
+      if (!ProductS.isActive) {
         return {
-          error:  new Error(`Product Not Found With Code : ${product_code}`),
+          error: new Error(`Product Not Active With Code : ${product_code}`),
           statusCode: 404,
         };
       }
-      else
-      {
-        if(!ProductS.isActive)
-        {
-          return {
-            error:  new Error(`Product Not Active With Code : ${product_code}`),
-            statusCode: 404,
-          };
-        }
-        else if(ProductS.productStatus === ProductEnum.IN_USE)
-        {
-          return {
-            error:  new Error(`Product Status Found In Use With Code : ${product_code}`),
-            statusCode: 404,
-          };
-        } 
-        else if(ProductS.productStatus === ProductEnum.EXHAUSTED)
-        {
-          return {
-            error:  new Error(`Product Status Found Exhausted With Code : ${product_code}`),
-            statusCode: 404,
-          };
-        }
-        else
-        {
-          Customer.products.push(ProductS._id);
-          await Customer.save();
-  
+      else if (ProductS.productStatus === ProductEnum.IN_USE) {
+        return {
+          error: new Error(`Product Status Found In Use With Code : ${product_code}`),
+          statusCode: 404,
+        };
+      }
+      else if (ProductS.productStatus === ProductEnum.EXHAUSTED) {
+        return {
+          error: new Error(`Product Status Found Exhausted With Code : ${product_code}`),
+          statusCode: 404,
+        };
+      }
+      else {
+        Customer.products.push(ProductS._id);
+        await Customer.save();
+
         await Product.findOneAndUpdate(
           { productCode: product_code },
           { productStatus: ProductEnum.IN_USE }
         );
-        }
       }
+    }
 
-      return {Customer};
+    return { Customer };
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes,userId,geoCoordinates,url,score) => {
+const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, geoCoordinates, url, score) => {
   let messages = [];
   let success = false;
   let errorMessages = [];
 
-  const Customers = await Customer.findOne({contact_number:customer_code});
+  const Customers = await Customer.findOne({ contact_number: customer_code });
   const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
   const Users = await User.findById(userId);
 
 
-if (!Customers) {
-  errorMessages.push(`Customer not found with code: ${customer_code}`);
-}
+  if (!Customers) {
+    errorMessages.push(`Customer not found with code: ${customer_code}`);
+  }
 
-if (!Users) {
-  errorMessages.push(`User not found with id:${userId}`);
-}
+  if (!Users) {
+    errorMessages.push(`User not found with id:${userId}`);
+  }
 
-if (errorMessages.length > 0) {
-  return {
-    success: false,
-    errorMessage:{errorMessages},
-  };
-}
+  if (errorMessages.length > 0) {
+    return {
+      success: false,
+      errorMessage: { errorMessages },
+    };
+  }
 
   const customerEXHAUSTEDId = Customers.products;
   console.log(customerEXHAUSTEDId)
@@ -513,11 +505,11 @@ if (errorMessages.length > 0) {
   }
 
   const ProductIds = ProductS.map((p) => p.id);
-  console.log("p:",ProductIds)
+  console.log("p:", ProductIds)
 
   const CustomerId = Customers.id;
-  console.log("c",CustomerId);
-  
+  console.log("c", CustomerId);
+
   if (
     NewProducts.length > 0 &&
     ExhaustedProductCodes.length === 0 &&
@@ -538,10 +530,10 @@ if (errorMessages.length > 0) {
       await Customers.save();
 
       const genrateLogForEXHAUSTED = {
-        customerId:CustomerId,
-        products:customerEXHAUSTEDId,
-        userId:userId,
-        status:ProductEnum.EXHAUSTED,
+        customerId: CustomerId,
+        products: customerEXHAUSTEDId,
+        userId: userId,
+        status: ProductEnum.EXHAUSTED,
       }
 
       await Log.createLog(genrateLogForEXHAUSTED)
@@ -559,70 +551,68 @@ if (errorMessages.length > 0) {
         }
       }
     );
-    
+
     const genrateLogForIN_USE = {
-      customerId:CustomerId,
-      products:NewProducts.map((p) => p.id),
-      userId:userId,
-      status:ProductEnum.IN_USE,
+      customerId: CustomerId,
+      products: NewProducts.map((p) => p.id),
+      userId: userId,
+      status: ProductEnum.IN_USE,
     };
 
-    await geoLocation.storeGeoLocation(CustomerId,geoCoordinates);
+    await geoLocation.storeGeoLocation(CustomerId, geoCoordinates);
     await Log.createLog(genrateLogForIN_USE);
-    
-    if(score)
-    {
+
+    if (score) {
       const generateReports = {
-      customerId:CustomerId,
-      waterScore:score
-    };
+        customerId: CustomerId,
+        waterScore: score,
+        date: new Date() 
+      };
     await Report.createReports(generateReports);
   };
 
-    if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0)
-    {
-      await sendFirstTimeMsg(customerMobileNumber,url);
-    }
-    else
-    {
-    await sendWhatsAppMsg(customerMobileNumber,customerName);
-    }
-
-    messages.push(
-      `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
-    );
-    success = true;
+  if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0) {
+    await sendFirstTimeMsg(customerMobileNumber, url);
+  }
+  else {
+    await sendWhatsAppMsg(customerMobileNumber, customerName);
   }
 
-  return {
-    success,
-    message: messages,
-    ProductCodes: {
-      notFound: NotFoundProductCodes.join(", "),
-      exhausted: ExhaustedProductCodes.join(", "),
-      inUse: InUseProductCodes.join(", "),
-      deleted: DeletedProductCodes.join(", "),
-    },
-    Customer: Customers,
-  };
+  messages.push(
+    `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
+  );
+  success = true;
+}
+
+return {
+  success,
+  message: messages,
+  ProductCodes: {
+    notFound: NotFoundProductCodes.join(", "),
+    exhausted: ExhaustedProductCodes.join(", "),
+    inUse: InUseProductCodes.join(", "),
+    deleted: DeletedProductCodes.join(", "),
+  },
+  Customer: Customers,
+};
 };
 
 const getCustomerDropdown = async (filter) => {
-  try{
+  try {
     return await Customer.find(filter)
-    .select("_id display_name contact_number").lean();
+      .select("_id display_name contact_number").lean();
 
-  }catch(error){
+  } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
   }
 };
 
 const getCustomerlocations = async (filter) => {
-  try{
+  try {
     return await Customer.find(filter)
-    .select("_id display_name contact_number geoCoordinates").lean();
+      .select("_id display_name contact_number geoCoordinates").lean();
 
-  }catch(error){
+  } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
   }
 };
@@ -671,9 +661,8 @@ const getCoordinatesFromShortLink = async (shortUrl) => {
 const sendCartidgeMissedMessage = async (cust_id) => {
   const customer = await Customer.findById(cust_id);
 
-  if(!customer)
-  {
-    return { success:false, message:`Customer Not Found With Id ${cust_id}`};
+  if (!customer) {
+    return { success: false, message: `Customer Not Found With Id ${cust_id}` };
   }
 
   const Customer_Name = customer.display_name;
@@ -681,21 +670,20 @@ const sendCartidgeMissedMessage = async (cust_id) => {
 
   await sendMissedCatridgeMsg(Customer_Phone, Customer_Name);
   const MissedCartidgeLog = {
-    customerId:cust_id,
+    customerId: cust_id,
   }
   await MissedCartidge.create(MissedCartidgeLog);
-  return { success: true, message:"Message Sent.." }
+  return { success: true, message: "Message Sent.." }
 };
 
 const getMissedCartidgeLog = async (customerId, startDate, endDate) => {
   const filter = {};
 
-  if(customerId)
-  {
+  if (customerId) {
     filter.customerId = customerId;
   }
 
-  
+
   let start, end;
 
   if (!startDate || !endDate) {
@@ -705,16 +693,16 @@ const getMissedCartidgeLog = async (customerId, startDate, endDate) => {
     end.setHours(23, 59, 59, 999);
   } else {
     start = new Date(startDate);
-    end = new Date (endDate);
+    end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
   }
 
-  filter.timestamp  = { $gte: start, $lte: end };
+  filter.timestamp = { $gte: start, $lte: end };
 
   const getMissedCartidgeData = await MissedCartidge
-  .find(filter)
-  .sort({ timestamp : -1 }) // descending order
-  .populate('customerId', 'display_name contact_number first_name last_name mobile email');
+    .find(filter)
+    .sort({ timestamp: -1 }) // descending order
+    .populate('customerId', 'display_name contact_number first_name last_name mobile email');
   return getMissedCartidgeData
 };
 
