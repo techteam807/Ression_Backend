@@ -73,42 +73,42 @@ const getReports = async (year, month, filter = {}) => {
 };
 
 
-const generateWaterReportsOld = async(customerId) => {
-    const reports = await Reports.find({ customerId, status: false });
+const generateWaterReportsOld = async (customerId) => {
+  const reports = await Reports.find({ customerId, status: false });
 
-    const customer = await Customers.findById(customerId);
+  const customer = await Customers.findById(customerId);
 
   const rawMobile = customer.mobile;
   const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
   const customerName = customer.display_name;
 
-    const reportIds = reports.map(r => r._id);
-    console.log(reportIds)
+  const reportIds = reports.map(r => r._id);
+  console.log(reportIds)
 
-    const batches = [];
-    // const generatedFiles = [];
+  const batches = [];
+  // const generatedFiles = [];
 
-    for (let i = 0; i + 3 < reportIds.length; i += 4) {
-        const batch = reportIds.slice(i, i + 4);
-         batches.push({
-            updateMany: {
+  for (let i = 0; i + 3 < reportIds.length; i += 4) {
+    const batch = reportIds.slice(i, i + 4);
+    batches.push({
+      updateMany: {
         filter: { _id: { $in: batch } },
         update: { $set: { status: true } }
       }
-         });
+    });
 
-        //  const batchReports = await Reports.find({ _id: { $in: batch } });
+    //  const batchReports = await Reports.find({ _id: { $in: batch } });
 
     // const fileName = await generatePDFForBatch(batchReports, customerId, batches.length - 1);
     // generatedFiles.push(fileName);
-    }
+  }
 
-    if (batches.length > 0) {
+  if (batches.length > 0) {
     await Reports.bulkWrite(batches);
   }
 
-    const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`
-    await sendWaterReportPdf(customerMobileNumber, customerName,docUrl) 
+  const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`
+  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl)
 
   return {
     customerId,
@@ -151,6 +151,46 @@ const generateWaterReports = async (customerId, logIds) => {
     updatedReportIds: reportIds,
   };
 };
+const adminAddOrUpdateWaterReport = async ({ customerId, date, waterScore,status }) => {
+  if (!customerId || !date || !waterScore) {
+    throw new Error("customerId, date, and waterScore are required");
+  }
+
+  const inputDate = new Date(date);
+
+  // Normalize to start and end of the day
+  const startOfDay = new Date(inputDate);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(inputDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Find existing report
+  const existingReport = await Reports.findOne({
+    customerId,
+    date: { $gte: startOfDay, $lte: endOfDay }
+  });
+
+  if (existingReport) {
+    // Update if found
+    existingReport.waterScore = waterScore;
+    // Update status only if it's provided in the request
+    if (typeof status !== 'undefined') {
+        existingReport.status = status; // store as string: "true" or "false"
+    }
+    existingReport.date = inputDate; // update just to normalize
+    await existingReport.save();
+    return { message: "Water report updated", data: existingReport };
+  } else {
+    // Create if not found
+    const newReport = await Reports.create({
+      customerId,
+      date: inputDate,
+      waterScore
+    });
+    return { message: "Water report added", data: newReport };
+  }
+};
 
 
-module.exports = { createReports, getReports, generateWaterReports };
+module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport };

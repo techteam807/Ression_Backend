@@ -61,6 +61,14 @@ const generatWatereReports = async (req, res) => {
   }
 };
 
+const adminAddOrUpdate = async (req, res) => {
+    try {
+        const result = await WaterReportService.adminAddOrUpdateWaterReport(req.body);
+        return res.status(result.data.createdAt ? 201 : 200).json(result);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
 
 
-module.exports = { getWaterReports, generatWatereReports };
+module.exports = { getWaterReports, generatWatereReports,adminAddOrUpdate };
