@@ -59,14 +59,14 @@ const getReports = async (year, month, filter = {}) => {
   if (year && month) {
     filter.$expr = {
       $and: [
-        { $eq: [{ $year: "$createdAt" }, year] },
-        { $eq: [{ $month: "$createdAt" }, month] }
+        { $eq: [{ $year: "$date" }, year] },
+        { $eq: [{ $month: "$date" }, month] }
       ]
     };
   } else if (year) {
-    filter.$expr = { $eq: [{ $year: "$createdAt" }, year] };
+    filter.$expr = { $eq: [{ $year: "$date" }, year] };
   } else if (month) {
-    filter.$expr = { $eq: [{ $month: "$createdAt" }, month] };
+    filter.$expr = { $eq: [{ $month: "$date" }, month] };
   }
 
   return await Reports.find(filter).populate('customerId', 'display_name');
