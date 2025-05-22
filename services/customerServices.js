@@ -16,6 +16,8 @@ const { sendMissedCatridgeMsg, sendWhatsAppMsg, sendFirstTimeMsg } = require('..
 const { default: mongoose } = require("mongoose");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
+const ZOHO_API_URL_SUB = "https://www.zohoapis.in/billing/v1/subscriptions";
+
 
 const getAccessToken = async () => {
   try {
@@ -85,6 +87,20 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    const subscriptionsResponse  = await axios.get(ZOHO_API_URL_SUB,{
+      headers: { Authorization: `Bearer ${accessToken}`},
+    });
+
+    const subscriptions = subscriptionsResponse.data.subscriptions || [];
+
+     const subscribedCustomerIds = subscriptions.map(sub => sub.customer_id);
+
+    const subscriptionStatuses = subscriptions.map(sub => ({
+      customer_id: sub.customer_id,
+      status: sub.status
+    }));
+    
+
     if (!response.data || !response.data.customers) {
       throw new Error("Invalid response from Zoho API");
     }
@@ -135,7 +151,8 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
 
         const newCustomer = new Customer({
           ...zohoCustomer,
-          geoCoordinates: zohoCustomer.geoCoordinates || undefined, // manually add geoCoordinates
+          geoCoordinates: zohoCustomer.geoCoordinates || undefined,
+          isSubscription: subscribedCustomerIds.includes(zohoCustomer.customer_id), // manually add geoCoordinates
         });
         newCustomers.push(newCustomer);
       } else {
@@ -150,7 +167,10 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
             break;
           }
         }
-
+const isSubscriptionNow = subscribedCustomerIds.includes(zohoCustomer.customer_id);
+        if (existing.isSubscription !== isSubscriptionNow) {
+          hasChanges = true;
+        }
         if (hasChanges) {
           // if (zohoCustomer.cf_google_map_link) {
           //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
@@ -170,7 +190,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
               filter: { customer_id: zohoCustomer.customer_id },
               update: {
                 $set:
-                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined },
+                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined, isSubscription: isSubscriptionNow },
               }
             },
           });
@@ -192,6 +212,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       message: "Sync complete",
       added: newCustomers.length,
       updated: updates.length,
+      // subscriptionStatuses,
     };
   } catch (error) {
     console.error("Error in fetchAndStoreCustomers:", error.message);
@@ -240,7 +261,7 @@ const fetchAndStoreCustomers = async (accessToken) => {
   }
 };
 
-const getAllcustomers = async (search, page, limit) => {
+const getAllcustomers = async (search, page, limit, isSubscription) => {
   let filter = search
     ? {
       $or: [
@@ -256,12 +277,19 @@ const getAllcustomers = async (search, page, limit) => {
     }
     : {};
 
+  if (isSubscription === "true") {
+    filter.isSubscription = true;
+  } else if (isSubscription === "false") {
+    filter.isSubscription = false;
+  }
+
+
   const options = {
     skip: (page - 1) * limit,
     limit: parseInt(limit),
   };
 
-  const customers = await Customer.find(filter)
+  const customers = await Customer.find(filter).populate("products", "productCode productStatus")
     // .select("_id display_name contact_number")
     .skip(options.skip)
     .limit(options.limit);
