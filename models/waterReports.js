@@ -4,7 +4,7 @@ const WaterReportsSchema = new mongoose.Schema({
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer"}, 
     waterScore: String,
     date: { type: Date, required: true }, 
-    status:{type:String,default:false}
+    status:{type:Boolean,default:false}
 },
 { timestamps: true }
 );
