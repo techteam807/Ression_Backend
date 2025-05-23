@@ -23,21 +23,19 @@ const getWaterReports = async (req, res) => {
 };
 
 const generatWatereReportsold = async (req, res) => {
-try{
+  try {
+    const { customerId } = req.query;
 
-    const {customerId} = req.query;
-
-    const result = await WaterReportService.generateWaterReports(customerId)
-return successResponse(
+    const result = await WaterReportService.generateWaterReports(customerId);
+    return successResponse(
       res,
       "Water Reports genrated successfully",
       null,
       result
     );
-}
-catch (error) {
+  } catch (error) {
     return errorResponse(res, "Error fetching Water Reports", 500, error);
-}
+  }
 };
 
 const generatWatereReports = async (req, res) => {
@@ -48,7 +46,10 @@ const generatWatereReports = async (req, res) => {
       return errorResponse(res, "customerId and logIds[] are required", 400);
     }
 
-    const result = await WaterReportService.generateWaterReports(customerId, logIds);
+    const result = await WaterReportService.generateWaterReports(
+      customerId,
+      logIds
+    );
 
     return successResponse(
       res,
@@ -61,6 +62,30 @@ const generatWatereReports = async (req, res) => {
   }
 };
 
+const adminAddOrUpdate = async (req, res) => {
+  try {
+    const result = await WaterReportService.adminAddOrUpdateWaterReport(
+      req.body
+    );
+    return res.status(result.data.createdAt ? 201 : 200).json(result);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
+const deleteWaterReport = async (req, res) => {
+  try {
+    const { logId } = req.params;
 
-module.exports = { getWaterReports, generatWatereReports };
+    const result = await WaterReportService.deleteWaterReports(logId);
+    if (!result.success) {
+      return errorResponse(res, result.message, 404, null);
+    }
+
+    return successResponse(res, result.message, null, null);
+  } catch (error) {
+    return errorResponse(res, "Error While Delete WaterReport", 500, error);
+  }
+};
+
+module.exports = { getWaterReports, generatWatereReports, adminAddOrUpdate, deleteWaterReport };
