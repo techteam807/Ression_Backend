@@ -14,12 +14,27 @@ connectDB();
 //allow to use route
 app.use(routes);
 
+// app.get("/", (req, res) => {
+//   res.send("Backend of Resin is running...");
+// });
+
+// const sendlog = async () => {
+//   console.log("corn job works");
+// };
+
+const getBackendStatus = () => {
+  return "Backend of Resin is running...";
+};
+
+// Route that uses the function
 app.get("/", (req, res) => {
-  res.send("Backend of Resin is running...");
+  res.send(getBackendStatus());
 });
 
-const sendlog = async () => {
-  console.log("corn job works");
+// Manual function that behaves the same way
+const handleRootLogicManually = () => {
+  const message = getBackendStatus();
+  console.log("Manual call:", message);
 };
 
 cron.schedule(
@@ -27,7 +42,7 @@ cron.schedule(
   async () => {
     try {
       console.log("Cron job executed at:");
-      await sendlog();
+      await handleRootLogicManually();
     }
     catch (error) {
       console.error("Error in cron job execution:", error);
