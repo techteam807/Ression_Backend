@@ -5,6 +5,7 @@ const GALLABOX_SUCCESSMSG = "bw_scan_app_utility2";
 const GALLABOX_MISSEDMSG = "missed_cartridgereplacement";
 const GALLABOX_FIRSTTIMEMSG = "welcome_cartidge_success";
 const GALLABOX_WATERREPORTS = "waterreport_template";
+const GALLABOX_SUCCESSMSG_NEW= "installation_success_1";
 
 //send customer success msg
 const sendWhatsAppMsg = async (mobile_number, name) => {
@@ -129,48 +130,86 @@ const sendMissedCatridgeMsg = async( mobile_number, name) => {
 };
 
 //send for new customers
-const sendFirstTimeMsg = async (mobile_number,url) => {
-    console.log(mobile_number,url);
-    return new Promise((resolve, reject) => {
-      const template = {
-        templateName: GALLABOX_FIRSTTIMEMSG,
-      };
+// const sendFirstTimeMsg = async (mobile_number,url) => {
+//     console.log(mobile_number,url);
+//     return new Promise((resolve, reject) => {
+//       const template = {
+//         templateName: GALLABOX_FIRSTTIMEMSG,
+//       };
   
-      if (url) {
-        template.headerValues = { mediaUrl: url };
-      }
+//       if (url) {
+//         template.headerValues = { mediaUrl: url };
+//       }
 
-      const options = {
-        method: "POST",
-        url: process.env.GALLABOX_URL,
-        headers: {
-          apisecret: process.env.GALLABOX_API_SECRET, // lowercase
-          apikey: process.env.GALLABOX_API_KEY, // lowercase
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          channelId: process.env.GALLABOX_CHANNEL_ID,
-          channelType: "whatsapp",
-          recipient: {
-            name: mobile_number,
-            phone: `91${mobile_number}`,
-          },
-          whatsapp: {
-            type: "template",
-            template, // shorthand for `template: template`
-          },
-        }),
-      };
+//       const options = {
+//         method: "POST",
+//         url: process.env.GALLABOX_URL,
+//         headers: {
+//           apisecret: process.env.GALLABOX_API_SECRET, // lowercase
+//           apikey: process.env.GALLABOX_API_KEY, // lowercase
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           channelId: process.env.GALLABOX_CHANNEL_ID,
+//           channelType: "whatsapp",
+//           recipient: {
+//             name: mobile_number,
+//             phone: `91${mobile_number}`,
+//           },
+//           whatsapp: {
+//             type: "template",
+//             template, // shorthand for `template: template`
+//           },
+//         }),
+//       };
   
-      request(options, (error, response) => {
-        if (error) {
-          console.error("Error sending WhatsApp Msg:", error);
-          return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
-        }
-        console.log("WhatsApp Message Sent:", response.body);
-        resolve({ success: true, message: "Msg sent successfully." });
-      });
+//       request(options, (error, response) => {
+//         if (error) {
+//           console.error("Error sending WhatsApp Msg:", error);
+//           return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
+//         }
+//         console.log("WhatsApp Message Sent:", response.body);
+//         resolve({ success: true, message: "Msg sent successfully." });
+//       });
+//     });
+// };
+const sendFirstTimeMsg = async (mobile_number, name) => {
+  console.log(mobile_number,name);
+  return new Promise((resolve, reject) => {
+    const options = {
+      method: "POST",
+      url: process.env.GALLABOX_URL,
+      headers: {
+        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
+        apikey: process.env.GALLABOX_API_KEY, // lowercase
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channelId: process.env.GALLABOX_CHANNEL_ID,
+        channelType: "whatsapp",
+        recipient: {
+          name: mobile_number,
+          phone: `91${mobile_number}`,
+        },
+        whatsapp: {
+          type: "template",
+          template: {
+            templateName: GALLABOX_SUCCESSMSG_NEW,
+            bodyValues: { name: name }, // Change from object to array
+          },
+        },
+      }),
+    };
+
+    request(options, (error, response) => {
+      if (error) {
+        console.error("Error sending WhatsApp Msg:", error);
+        return reject({ success: false, message: "Failed to send Msg via WhatsApp." });
+      }
+      console.log("WhatsApp Message Sent:", response.body);
+      resolve({ success: true, message: "Msg sent successfully." });
     });
+  });
 };
 
 //send waterReports
