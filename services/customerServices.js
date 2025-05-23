@@ -600,7 +600,7 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
   };
 
   if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0) {
-    await sendFirstTimeMsg(customerMobileNumber, url);
+    await sendFirstTimeMsg(customerMobileNumber, customerName);
   }
   else {
     await sendWhatsAppMsg(customerMobileNumber, customerName);
