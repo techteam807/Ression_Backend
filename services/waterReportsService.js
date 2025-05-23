@@ -192,5 +192,20 @@ const adminAddOrUpdateWaterReport = async ({ customerId, date, waterScore,status
   }
 };
 
+const deleteWaterReports = async (logId) => {
+    const report = await Reports.findById(logId);
 
-module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport };
+  if(!report)
+    {
+      return { success: false, message: "waterReport not found"};
+    }
+  await Reports.findByIdAndDelete(logId);
+
+   return {
+    success: true,
+    message: "WaterReport deleted successfully",
+   }
+};
+
+
+module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport, deleteWaterReports };
