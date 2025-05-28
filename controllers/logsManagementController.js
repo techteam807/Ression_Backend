@@ -121,3 +121,22 @@ exports.getTechnicianScore = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+
+exports.getTechnicianScoreByDay = async (req, res) => {
+  try {
+
+    const {startDate, endDate} = req.query;
+
+    const result = await logService.technicianScoreByDay(startDate, endDate);
+
+    res.json({
+      result,
+      message:"get scores.."
+    })
+
+  } catch (error)
+  {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+}
