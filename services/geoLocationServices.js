@@ -140,7 +140,7 @@ const getGeoLocations = async () => {
   const geoLocations = await GeoLocation.find()
     .populate({
       path: "customerId",
-      select: "display_name products",
+      select: "display_name products contact_number cf_cartridge_qty",
       populate: {
         path: "products",
         select: "productCode status"
@@ -153,9 +153,12 @@ const getGeoLocations = async () => {
       customer: {
         id: loc.customerId._id,
         name: loc.customerId.display_name,
-        products: loc.customerId.products
+        products: loc.customerId.products,
+        contact_number:loc.customerId.contact_number,
+        cf_cartridge_qty:loc.customerId.cf_cartridge_qty
       },
-      geoCoordinates: loc.geoCoordinates
+      geoCoordinates: loc.geoCoordinates,
+      mainGeoCoordinates: loc.MaingeoCoordinates,
     }));
 
   return {
