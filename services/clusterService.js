@@ -1,6 +1,8 @@
 const Customer = require("../models/customerModel");
 const Cluster = require("../models/clusterModel.js");
+const GeoLocation = require("../models/geoLocationModel.js");
 const mongoose = require('mongoose');
+const { getGeoLocations } = require("./geoLocationServices.js");
 
 const distance = (coord1, coord2) => { 
     const dx = coord1[0] - coord2[0];
@@ -10,9 +12,18 @@ const distance = (coord1, coord2) => {
   
     const getClusteredCustomerLocations = async (maxCustomersPerCluster = 15, maxCartridgeQty = 20) => {
         try {
-        const customers = await Customer.find({})
-            .select("_id display_name contact_number geoCoordinates cf_cartridge_qty")
-            .lean();
+
+        const { data: customersRaw } = await getGeoLocations();
+
+        const customers = customersRaw.map(item => ({
+          _id: item.customer.id, // map `id` to `_id`
+          display_name: item.customer.name,
+          contact_number: item.customer.contact_number,
+          cf_cartridge_qty: item.customer.cf_cartridge_qty,
+          geoCoordinates: item.mainGeoCoordinates
+        }));
+
+        console.log("customers", customers);
     
         const allClusters = await Cluster.find({}).lean();
     
@@ -152,12 +163,83 @@ const distance = (coord1, coord2) => {
           throw new Error(error.message);
         }
       };
-  
+
 const getAllClusters = async () => {
   try {
-    const clusters = await Cluster.find()
-      .populate("customers", "display_name contact_number geoCoordinates")
-      .lean();
+    const clusters = await Cluster.aggregate([
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customers",
+          foreignField: "_id",
+          as: "customers"
+        }
+      },
+      {
+        $lookup: {
+          from: "geolocations",
+          let: { customerId: "$customers._id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$customerId", "$$customerId"]
+                }
+              }
+            },
+            {
+              $group: {
+                _id: "$customerId",
+                geoCoordinates: { $first: "$MaingeoCoordinates" }
+              }
+            }
+          ],
+          as: "geoData"
+        }
+      },
+      {
+        $addFields: {
+          customers: {
+            $map: {
+              input: "$customers",
+              as: "cust",
+              in: {
+                _id: "$$cust._id",
+                display_name: "$$cust.display_name",
+                contact_number: "$$cust.contact_number",
+                MaingeoCoordinates: "$$cust.MaingeoCoordinates",
+                geoCoordinates: {
+                  $let: {
+                    vars: {
+                      geo: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$geoData",
+                              as: "g",
+                              cond: { $eq: ["$$g._id", "$$cust._id"] }
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    in: "$$geo.geoCoordinates"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          clusterNo: 1,
+          cartridge_qty: 1,
+          customers: 1
+        }
+      }
+    ]);
 
     return clusters;
   } catch (error) {
