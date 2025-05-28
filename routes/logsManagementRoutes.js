@@ -17,5 +17,6 @@ router.get("/logs/customer/:customerId", getCustomer, logManagementController.ge
 router.get("/logs/product/:productId", getProduct, logManagementController.getLogsByProduct);
 router.get("/logs/user/:userId", getUser, logManagementController.getLogsByUser);
 router.get("/logs/technicianScore",logManagementController.getTechnicianScore);
+router.get("/logs/gettechnicianScoreByDay",logManagementController.getTechnicianScoreByDay)
 
 module.exports = router;
