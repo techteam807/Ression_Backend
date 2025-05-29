@@ -378,3 +378,125 @@ if(userId)
 
   return finalResult;
 };
+
+exports.technicianScoreByDay = async(startDate, endDate) => {
+   const filter = {};
+  const today = moment();
+
+  let startMoment, endMoment;
+
+  // Handle startDate if it's provided
+  if (!startDate && !endDate) {
+    // Case 1: Neither date provided → use current week's start and end
+    // startMoment = today.clone().startOf('week');
+    // endMoment = today.clone().endOf('week');
+     startMoment = moment('2025-04-01', 'YYYY-MM-DD');
+     endMoment = moment('2025-05-31', 'YYYY-MM-DD');
+  } else if (startDate && !endDate) {
+    // Case 2: Only startDate provided → use the same day's start and end
+    startMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").startOf('day');
+    endMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
+  } else {
+    // Case 3: Either one or both provided
+    if (startDate) {
+      startMoment = moment(startDate, "YYYY-MM-DD HH:mm:ss").startOf('day');
+    }
+    if (endDate) {
+      endMoment = moment(endDate, "YYYY-MM-DD HH:mm:ss").endOf('day');
+    }
+  }
+
+  if (startMoment) {
+    filter.timestamp = { $gte: startMoment.toDate() };
+  }
+  if (endMoment) {
+    filter.timestamp = {
+      ...filter.timestamp,
+      $lte: endMoment.toDate(),
+    };
+  }
+  // Fetch logs
+  const logs = await LogManagement.find({
+    status: ProductEnum.IN_USE,
+    ...filter,
+  }).populate('userId').sort({ timestamp: 1 });
+
+  const groupedByTechnician = {};
+
+  for (const log of logs) {
+    if (!log.userId) continue;
+    const technicianId = log.userId._id.toString();
+    const technicianName = log.userId.user_name || technicianId; // <- updated here
+    const date = moment(log.timestamp).format('YYYY-MM-DD');
+
+    if (!groupedByTechnician[technicianId]) {
+      groupedByTechnician[technicianId] = {};
+    }
+
+    if (!groupedByTechnician[technicianId][date]) {
+      groupedByTechnician[technicianId][date] = {
+        name: technicianName,
+        replacements: [],
+      };
+    }
+
+    groupedByTechnician[technicianId][date].replacements.push(log.timestamp);
+  }
+
+  const finalResult = [];
+
+for (const techId in groupedByTechnician) {
+  const techLogs = groupedByTechnician[techId];
+
+  for (const date in techLogs) {
+    const timestamps = techLogs[date].replacements;
+    const technicianName = techLogs[date].name;
+
+    let totalReplacements = timestamps.length;
+    let totalScore = 0;
+    let scoreCount = 0;
+    let totalAdjustedTime = 0;
+
+    for (let i = 1; i < timestamps.length; i++) {
+      const start = timestamps[i - 1];
+      const end = timestamps[i];
+
+      const timeTaken = getMinutesDiff(start, end);
+      const lunchOverlap = getLunchOverlap(start, end);
+      const adjustedTime = timeTaken - lunchOverlap;
+
+      const IDEAL = 30;
+      const PENALTY = 1.5;
+      const BONUS = 0.5;
+
+      let score;
+
+      if (adjustedTime > IDEAL) {
+        score = Math.max(0, 100 - (adjustedTime - IDEAL) * PENALTY);
+      } else {
+        score = 100 + (IDEAL - adjustedTime) * BONUS;
+      }
+
+      totalScore += score;
+      totalAdjustedTime += adjustedTime;
+      scoreCount++;
+    }
+
+    const avgScore = scoreCount ? totalScore / scoreCount : 0;
+    const avgTimePerReplacement = scoreCount ? totalAdjustedTime / scoreCount : 0;
+
+    finalResult.push({
+      technician_id: techId,
+      technician: technicianName,
+      date,
+      totalReplacements,
+      averageEfficiencyScore: parseFloat(avgScore.toFixed(2)),
+      averageReplacementTime: parseFloat(avgTimePerReplacement.toFixed(2))
+    });
+  }
+}
+
+// Optional: Sort by date then by technician name or score
+finalResult.sort((a, b) => new Date(a.date) - new Date(b.date));
+  return finalResult;
+};
