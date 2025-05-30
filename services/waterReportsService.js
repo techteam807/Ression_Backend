@@ -1,55 +1,16 @@
 const Reports = require("../models/waterReports");
 const Customers = require("../models/customerModel");
-// const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-// const { PDFDocument } = require('pdf-lib');
-// const fs = require('fs');
-// const path = require('path');
 const { sendWaterReportPdf } = require("./whatsappMsgServices");
-
-// const chartWidth = 600;
-// const chartHeight = 400;
-// const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: chartWidth, height: chartHeight });
-
-// Generate one chart PDF for a batch of reports
-// const generatePDFForBatch = async (batchReports, customerId, index) => {
-//   const labels = batchReports.map(r => new Date(r.createdAt).toLocaleDateString());
-//   const scores = batchReports.map(r => parseFloat(r.waterScore));
-
-//   const chartBuffer = await chartJSNodeCanvas.renderToBuffer({
-//     type: 'bar',
-//     data: {
-//       labels,
-//       datasets: [{
-//         label: 'Water Score',
-//         data: scores,
-//         backgroundColor: 'rgba(0, 123, 255, 0.6)'
-//       }]
-//     },
-//     options: {
-//       scales: {
-//         y: { beginAtZero: true }
-//       }
-//     }
-//   });
-
-//   const pdfDoc = await PDFDocument.create();
-//   const page = pdfDoc.addPage([chartWidth, chartHeight + 50]);
-//   const image = await pdfDoc.embedPng(chartBuffer);
-
-//   page.drawImage(image, {
-//     x: 0,
-//     y: 50,
-//     width: chartWidth,
-//     height: chartHeight
-//   });
-
-//   const pdfBytes = await pdfDoc.save();
-//   const fileName = `water-report-${customerId}-batch${index + 1}.pdf`;
-//   const filePath = path.join(__dirname, '../reports', fileName);
-//   fs.writeFileSync(filePath, pdfBytes);
-
-//   return fileName;
-// };
+const {Storage}= require('@google-cloud/storage');
+const storage = new Storage({projectId: process.env.GCLOUD_PROJECT});
+const bucket = storage.bucket(process.env.GCS_BUCKET);
+/**
+ * Upload a PDF buffer to GCS and return the public URL.
+ * @param {Buffer} buffer
+ * @param {string} originalName
+ * @param {string} mimetype
+ * @returns {Promise<string>} publicUrl
+ */
 
 const createReports = async (reportsData) => {
   return await Reports.create(reportsData);
@@ -72,54 +33,7 @@ const getReports = async (year, month, filter = {}) => {
   return await Reports.find(filter).populate('customerId', 'display_name');
 };
 
-
-const generateWaterReportsOld = async (customerId) => {
-  const reports = await Reports.find({ customerId, status: false });
-
-  const customer = await Customers.findById(customerId);
-
-  const rawMobile = customer.mobile;
-  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
-  const customerName = customer.display_name;
-
-  const reportIds = reports.map(r => r._id);
-  console.log(reportIds)
-
-  const batches = [];
-  // const generatedFiles = [];
-
-  for (let i = 0; i + 3 < reportIds.length; i += 4) {
-    const batch = reportIds.slice(i, i + 4);
-    batches.push({
-      updateMany: {
-        filter: { _id: { $in: batch } },
-        update: { $set: { status: true } }
-      }
-    });
-
-    //  const batchReports = await Reports.find({ _id: { $in: batch } });
-
-    // const fileName = await generatePDFForBatch(batchReports, customerId, batches.length - 1);
-    // generatedFiles.push(fileName);
-  }
-
-  if (batches.length > 0) {
-    await Reports.bulkWrite(batches);
-  }
-
-  const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`
-  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl)
-
-  return {
-    customerId,
-    totalReportsFound: reportIds.length,
-    batchesUpdated: batches.length,
-    reportsUpdated: batches.length * 4,
-    pdfFiles: generatedFiles,
-  };
-};
-
-const generateWaterReports = async (customerId, logIds) => {
+const generateWaterReports = async (customerId, logIds, docUrl) => {
   const reports = await Reports.find({
     customerId,
     status: false,
@@ -140,9 +54,7 @@ const generateWaterReports = async (customerId, logIds) => {
     );
   }
 
-  // const docUrl = `https://file-examples.com/storage/fef7b79c7f68230219872f8/2017/10/file-sample_150kB.pdf`;
-
-  // await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
+  await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
 
   return {
     customerId,
@@ -151,6 +63,7 @@ const generateWaterReports = async (customerId, logIds) => {
     updatedReportIds: reportIds,
   };
 };
+
 const adminAddOrUpdateWaterReport = async ({ customerId, date, waterScore,status }) => {
   if (!customerId || !date || !waterScore) {
     throw new Error("customerId, date, and waterScore are required");
@@ -207,5 +120,27 @@ const deleteWaterReports = async (logId) => {
    }
 };
 
+const uploadPdf = async (buffer, originalName, mimetype) => {
+  if (mimetype !== 'application/pdf') {
+    throw new Error("Only PDF Allowed");
+  }
 
-module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport, deleteWaterReports };
+  const fileName = `${Date.now()}-${originalName.replace(/\s+/g, '_')}`;
+  const file = bucket.file(fileName);
+
+  await file.save(buffer, {
+    resumable: false,
+    contentType: mimetype
+  });
+
+  const uploadedUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURIComponent(fileName)}`;
+;
+
+  return {
+    uploadedUrl
+  };
+};
+
+
+
+module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport, deleteWaterReports, uploadPdf };

@@ -40,7 +40,7 @@ const generatWatereReportsold = async (req, res) => {
 
 const generatWatereReports = async (req, res) => {
   try {
-    const { customerId, logIds } = req.body;
+    const { customerId, logIds, docUrl } = req.body;
 
     if (!customerId || !Array.isArray(logIds) || logIds.length === 0) {
       return errorResponse(res, "customerId and logIds[] are required", 400);
@@ -48,7 +48,8 @@ const generatWatereReports = async (req, res) => {
 
     const result = await WaterReportService.generateWaterReports(
       customerId,
-      logIds
+      logIds,
+      docUrl
     );
 
     return successResponse(
@@ -88,4 +89,22 @@ const deleteWaterReport = async (req, res) => {
   }
 };
 
-module.exports = { getWaterReports, generatWatereReports, adminAddOrUpdate, deleteWaterReport };
+const uploadPdf = async (req, res, next) =>
+{
+  try {
+    if(!req.file)
+    {
+      return errorResponse(res, "no file provided", 500, error);
+    }
+
+    const result = await WaterReportService.uploadPdf(req.file.buffer, req.file.originalname, req.file.mimetype);
+    return successResponse(res, "url Genarted..", null, result);
+  }
+  catch (error)
+    {
+      next(error);
+return errorResponse(res, "Error While upload WaterReport", 500, error);
+    }
+}
+
+module.exports = { getWaterReports, generatWatereReports, adminAddOrUpdate, deleteWaterReport, uploadPdf };
