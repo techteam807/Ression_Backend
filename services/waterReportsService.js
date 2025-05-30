@@ -9,9 +9,8 @@ const bucket = storage.bucket(process.env.GCS_BUCKET);
  * @param {Buffer} buffer
  * @param {string} originalName
  * @param {string} mimetype
- * @returns {Promise<string>} publicUrl
- */
-
+ * @returns {Promise<string>} publicUrl
+ */
 const createReports = async (reportsData) => {
   return await Reports.create(reportsData);
 };
@@ -138,7 +137,7 @@ const uploadPdf = async (buffer, originalName, mimetype) => {
 
   return {
     uploadedUrl
-  };
+  };
 };
 
 

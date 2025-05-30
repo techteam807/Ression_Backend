@@ -103,8 +103,8 @@ const uploadPdf = async (req, res, next) =>
   catch (error)
     {
       next(error);
-return errorResponse(res, "Error While upload WaterReport", 500, error);
-    }
+return errorResponse(res, "Error While upload WaterReport", 500, error);
+    }
 }
 
 module.exports = { getWaterReports, generatWatereReports, adminAddOrUpdate, deleteWaterReport, uploadPdf };
