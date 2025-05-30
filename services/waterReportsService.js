@@ -2,7 +2,12 @@ const Reports = require("../models/waterReports");
 const Customers = require("../models/customerModel");
 const { sendWaterReportPdf } = require("./whatsappMsgServices");
 const {Storage}= require('@google-cloud/storage');
-const storage = new Storage({projectId: process.env.GCLOUD_PROJECT});
+const gcloudCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+const storage = new Storage({
+  projectId: process.env.GCLOUD_PROJECT,
+  credentials: gcloudCredentials
+});
 const bucket = storage.bucket(process.env.GCS_BUCKET);
 /**
  * Upload a PDF buffer to GCS and return the public URL.
