@@ -164,6 +164,11 @@ const distance = (coord1, coord2) => {
         }
       };
 
+const warehouseLocation = {
+  lat: 23.0811482565727,
+  lng: 72.49727159591127
+};
+
 const getAllClusters = async () => {
   try {
     const clusters = await Cluster.aggregate([
@@ -246,6 +251,157 @@ const getAllClusters = async () => {
     throw new Error("Failed to fetch clusters: " + error.message);
   }
 };
+
+function haversineDistance(coord1, coord2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(coord2.lat - coord1.lat);
+  const dLon = toRad(coord2.lng - coord1.lng);
+  const lat1 = toRad(coord1.lat);
+  const lat2 = toRad(coord2.lat);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// function optimizeRoute(cluster, warehouse) {
+//   const customers = cluster.customers.map((c) => ({
+//     id: c._id,
+//     name: c.display_name,
+//     coord: {
+//       lat: c.geoCoordinates.coordinates[1],
+//       lng: c.geoCoordinates.coordinates[0],
+//     },
+//   }));
+
+//   console.log(customers);
+  
+
+//   let currentLocation = warehouse;
+//   const route = [];
+//   const unvisited = new Set(customers);
+
+//   while (unvisited.size > 0) {
+//     let nearest = null;
+//     let nearestDist = Infinity;
+
+//     for (const customer of unvisited) {
+//       const dist = haversineDistance(currentLocation, customer.coord);
+//       if (dist < nearestDist) {
+//         nearestDist = dist;
+//         nearest = customer;
+//       }
+//     }
+
+//     route.push(nearest);
+//     currentLocation = nearest.coord;
+//     unvisited.delete(nearest);
+//   }
+
+//   return route;
+// }
+
+function optimizeRoute(cluster, warehouse) {
+  const customers = cluster.customers
+    .filter(c => c.geoCoordinates && Array.isArray(c.geoCoordinates.coordinates))
+    .map((c) => ({
+      id: c._id,
+      name: c.display_name,
+      coord: {
+        lat: c.geoCoordinates.coordinates[1],
+        lng: c.geoCoordinates.coordinates[0],
+      },
+    }));
+
+  let currentLocation = warehouse;
+  const route = [];
+  const unvisited = new Set(customers);
+
+  while (unvisited.size > 0) {
+    let nearest = null;
+    let nearestDist = Infinity;
+
+    for (const customer of unvisited) {
+      const dist = haversineDistance(currentLocation, customer.coord);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = customer;
+      }
+    }
+
+    route.push(nearest);
+    currentLocation = nearest.coord;
+    unvisited.delete(nearest);
+  }
+
+  return route;
+}
+
+
+const fetchOptimizedRoutes = async () => {
+  const clusters = await getAllClusters();
+console.log(clusters);
+
+  return clusters.map((cluster) => {
+    const optimizedRoute = optimizeRoute(cluster, warehouseLocation);
+    const visitSequence = [];
+
+    let totalDistance = 0;
+    let lastCoord = warehouseLocation;
+
+    // Start from warehouse
+    visitSequence.push({
+      visitNumber: 0,
+      customerName: "Warehouse",
+      lat: warehouseLocation.lat,
+      lng: warehouseLocation.lng,
+      clusterId: cluster.clusterNo,
+      distanceFromPrev: 0, // warehouse start point
+    });
+
+    // Route through all customers
+    optimizedRoute.forEach((customer, idx) => {
+      const dist = haversineDistance(lastCoord, customer.coord);
+      totalDistance += dist;
+
+      visitSequence.push({
+        visitNumber: idx + 1,
+        customerName: customer.name,
+        lat: customer.coord.lat,
+        lng: customer.coord.lng,
+        clusterId: cluster.clusterNo,
+        distanceFromPrev: dist,
+      });
+
+      lastCoord = customer.coord;
+    });
+
+    // Return to warehouse
+    const returnDist = haversineDistance(lastCoord, warehouseLocation);
+    totalDistance += returnDist;
+
+    visitSequence.push({
+      visitNumber: optimizedRoute.length + 1,
+      customerName: "Return to Warehouse",
+      lat: warehouseLocation.lat,
+      lng: warehouseLocation.lng,
+      clusterId: cluster.clusterNo,
+      distanceFromPrev: returnDist,
+    });
+
+    return {
+      clusterNo: cluster.clusterNo,
+      cartridge_qty: cluster.cartridge_qty,
+      totalDistance: totalDistance.toFixed(2), // in km, formatted
+      visitSequence,
+    };
+  });
+};
+
+
+
 
 // const reassignMultipleCustomersToClusters = async (reassignments) => {
 //   const bulkPullOps = reassignments.map(({ customerId }) => ({
@@ -361,5 +517,6 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 module.exports = {
     reassignMultipleCustomersToClusters,
     getAllClusters,
-    getClusteredCustomerLocations
+    getClusteredCustomerLocations,
+    fetchOptimizedRoutes,
 }
