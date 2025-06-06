@@ -9,13 +9,26 @@ const ClusterSchema = new mongoose.Schema(
     cartridge_qty: {
       type: Number,
     },
+    // customers: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "Customer",
+    //     required: true,
+    //   },
+    // ],
     customers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer",
-        required: true,
-      },
-    ],
+  {
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
+    sequenceNo: {
+      type: Number,
+       default: 0,
+    }
+  }
+]
   },
   {
     timestamps: true,
