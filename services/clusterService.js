@@ -354,8 +354,8 @@ const getClusteredCustomerLocations = async (
 
 
 const warehouseLocation = {
-  lat: 23.0811482565727,
-  lng: 72.49727159591127,
+  lat: 23.09762579093222,
+  lng: 72.54794212155194,
 };
 
 const getAllClustersold = async () => {
@@ -563,8 +563,20 @@ function optimizeRoute(cluster, warehouse) {
 }
 
 
-const fetchOptimizedRoutes = async () => {
-  const clusters = await getAllClusters();
+const fetchOptimizedRoutes = async (clusterNo) => {
+  console.log("No:",clusterNo);
+  let clusters = await getAllClusters();
+  console.log(clusters);
+  
+
+  if(clusterNo !== undefined && clusterNo !== null && !isNaN(clusterNo))
+  {
+    clusters = clusters.filter((cluster) => cluster.clusterNo === clusterNo);
+  }
+
+  console.log("cluster:",clusters);
+  
+
   const results = [];
 
   for (const cluster of clusters) {
