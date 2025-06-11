@@ -140,7 +140,7 @@ const getGeoLocations = async () => {
   const geoLocations = await GeoLocation.find()
     .populate({
       path: "customerId",
-      select: "display_name products contact_number cf_cartridge_qtym",
+      select: "display_name products contact_number cf_cartridge_qty",
       populate: {
         path: "products",
         select: "productCode status"

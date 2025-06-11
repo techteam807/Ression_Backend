@@ -1,6 +1,6 @@
 
 const { successResponse, errorResponse } = require("../config/response");
-const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters } = require("../services/clusterService");
+const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters, fetchOptimizedRoutes } = require("../services/clusterService");
 
 const getClusteredCustomers = async (req, res) => {
   try {
@@ -41,4 +41,16 @@ const reassignMultipleCustomers = async (req, res) => {
   }
 };
 
-module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers }
+const optimizedRoute = async (req, res) => {
+  try{
+    const clusterNo= req.query.clusterNo;
+ const result = await fetchOptimizedRoutes(Number(clusterNo));
+ return successResponse(res, "Customers Routes",null, result);
+  }
+  catch (error)
+  {
+return errorResponse(res, error.message || error, 500);
+  }
+}; 
+
+module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers, optimizedRoute }
