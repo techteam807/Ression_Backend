@@ -352,10 +352,9 @@ const getClusteredCustomerLocations = async (
 };
 
 
-
 const warehouseLocation = {
-  lat: 23.09762579093222,
-  lng: 72.54794212155194,
+  lat: 23.0794,
+  lng: 72.3813,
 };
 
 const getAllClustersold = async () => {
