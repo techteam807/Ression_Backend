@@ -21,6 +21,24 @@ const assignCluster = async (req, res) => {
     }
 };
 
+const getClusterDropdown = async (req, res) => {
+    try {
+        const result = await clusterAssignmentService.getClusterDropdown();
+        
+        res.status(200).json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error in getClusterDropdown:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message || 'Error fetching cluster dropdown',
+            error: error.message
+        });
+    }
+};
+
 const getAssignments = async (req, res) => {
     try {
         const filters = req.query;
@@ -41,6 +59,25 @@ const getAssignments = async (req, res) => {
         res.status(400).json({
             success: false,
             message: error.message || 'Error fetching assignments',
+            error: error.message
+        });
+    }
+};
+
+const getAllAssignments = async (req, res) => {
+    try {
+        const filters = req.query;
+        const result = await clusterAssignmentService.getAllAssignments(filters);
+        
+        res.status(200).json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error in getAllAssignments:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message || 'Error fetching all assignments',
             error: error.message
         });
     }
@@ -68,5 +105,7 @@ const getPastAssignments = async (req, res) => {
 module.exports = {
     assignCluster,
     getAssignments,
-    getPastAssignments
+    getPastAssignments,
+    getAllAssignments,
+    getClusterDropdown
 }; 

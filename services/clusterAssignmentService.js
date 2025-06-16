@@ -1,4 +1,5 @@
 const ClusterAssignment = require('../models/ClusterAssignmentModel');
+const Cluster = require('../models/clusterModel');
 
 const assignCluster = async (userId, clusterId, date) => {
     try {
@@ -48,6 +49,19 @@ const assignCluster = async (userId, clusterId, date) => {
     }
 };
 
+const getClusterDropdown = async () => {
+    try {
+        const clusters = await Cluster.find({}, 'clusterNo _id')
+            .sort({ clusterNo: 1 })
+            .lean();
+
+        return clusters;
+    } catch (error) {
+        console.error('Error in getClusterDropdown:', error);
+        throw error;
+    }
+};
+
 const getAssignments = async (filters = {}) => {
     try {
         // Get current date in Indian timezone
@@ -83,13 +97,7 @@ const getAssignments = async (filters = {}) => {
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-            .populate({
-                path: 'clusterId',
-                populate: {
-                    path: 'customers.customerId',
-                    select: 'display_name contact_number'
-                }
-            })
+            .populate('clusterId', 'clusterNo')
             .sort({ date: 1 })
             .lean();
 
@@ -131,6 +139,44 @@ const getAssignments = async (filters = {}) => {
     }
 };
 
+const getAllAssignments = async (filters = {}) => {
+    try {
+        // Build query based on filters
+        const query = {};
+        if (filters.clusterId) query.clusterId = filters.clusterId;
+        if (filters.userId) query.userId = filters.userId;
+
+        if (filters.startDate && filters.endDate) {
+            try {
+                // Convert dates to Indian timezone
+                const startDate = new Date(filters.startDate);
+                const endDate = new Date(filters.endDate);
+                const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                
+                query.date = {
+                    $gte: indianStartDate,
+                    $lte: indianEndDate
+                };
+            } catch (dateError) {
+                throw new Error('Invalid date format provided');
+            }
+        }
+
+        // Get all assignments based on filters with complete population
+        const assignments = await ClusterAssignment.find(query)
+            .populate('userId', 'user_name')
+            .populate('clusterId', 'clusterNo')
+            .sort({ date: 1 })
+            .lean();
+
+        return assignments;
+    } catch (error) {
+        console.error('Error in getAllAssignments:', error);
+        throw error;
+    }
+};
+
 const getPastAssignments = async (filters = {}) => {
     try {
         // Get current date in Indian timezone
@@ -166,13 +212,7 @@ const getPastAssignments = async (filters = {}) => {
         // Get past assignments with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-            .populate({
-                path: 'clusterId',
-                populate: {
-                    path: 'customers.customerId',
-                    select: 'display_name contact_number'
-                }
-            })
+            .populate('clusterId', 'clusterNo')
             .sort({ date: -1 }) // Sort by date descending for past assignments
             .lean();
 
@@ -186,5 +226,7 @@ const getPastAssignments = async (filters = {}) => {
 module.exports = {
     assignCluster,
     getAssignments,
-    getPastAssignments
+    getPastAssignments,
+    getAllAssignments,
+    getClusterDropdown
 }; 
