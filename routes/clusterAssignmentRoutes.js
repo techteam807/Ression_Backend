@@ -13,7 +13,13 @@ router.post('/assign', validateRequest(assignClusterValidation), clusterAssignme
 // Get live and upcoming assignments
 router.get('/', validateRequest(getAssignmentsValidation, 'query'), clusterAssignmentController.getAssignments);
 
+// Get all assignments without categorization
+router.get('/all', validateRequest(getAssignmentsValidation, 'query'), clusterAssignmentController.getAllAssignments);
+
 // Get past assignments
 router.get('/past', validateRequest(getAssignmentsValidation, 'query'), clusterAssignmentController.getPastAssignments);
+
+// Get cluster dropdown data
+router.get('/clusters', clusterAssignmentController.getClusterDropdown);
 
 module.exports = router; 
