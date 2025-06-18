@@ -10,7 +10,7 @@ router.use(express.json());
 // Assign cluster to user
 router.post('/assign', validateRequest(assignClusterValidation), clusterAssignmentController.assignCluster);
 
-// Get live and upcoming assignments
+// Get live and upcoming assignments - for APP
 router.get('/', validateRequest(getAssignmentsValidation, 'query'), clusterAssignmentController.getAssignments);
 
 // Get all assignments without categorization

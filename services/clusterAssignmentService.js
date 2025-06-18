@@ -73,7 +73,7 @@ const getAssignments = async (filters = {}) => {
         const query = {};
         if (filters.clusterId) query.clusterId = filters.clusterId;
         if (filters.userId) query.userId = filters.userId;
-        
+
         // Add date filter for live and upcoming
         query.date = { $gte: indianDate };
 
@@ -84,7 +84,7 @@ const getAssignments = async (filters = {}) => {
                 const endDate = new Date(filters.endDate);
                 const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                 const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                
+
                 query.date = {
                     $gte: indianStartDate,
                     $lte: indianEndDate
@@ -97,46 +97,52 @@ const getAssignments = async (filters = {}) => {
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-            .populate('clusterId', 'clusterNo')
-            .sort({ date: 1 })
-            .lean();
-
-        // Categorize assignments based on date
-        const categorizedAssignments = {
-            live: [],
-            upcoming: []
-        };
-
-        // Use for...of for better async handling if needed in future
-        for (const assignment of assignments) {
-            try {
-                // Convert assignment date to Indian timezone
-                const assignmentDate = new Date(assignment.date);
-                const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                indianAssignmentDate.setHours(0, 0, 0, 0);
-
-                // Convert dates to ISO strings for consistent comparison
-                const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
-                const currentDateStr = indianDate.toISOString().split('T')[0];
-
-                // Explicitly check for live and upcoming dates
-                if (assignmentDateStr === currentDateStr) {
-                    categorizedAssignments.live.push(assignment);
-                } else if (assignmentDateStr > currentDateStr) {
-                    categorizedAssignments.upcoming.push(assignment);
+           .populate({
+                path: 'clusterId',
+                populate: {
+                    path: 'customers.customerId',
+                    select: 'display_name contact_number cf_google_map_link'
                 }
-                // Any dates before current date will be filtered out by the initial query
-            } catch (error) {
-                console.error('Error processing assignment:', error);
-                // Skip invalid assignments instead of failing the entire request
-            }
-        }
+            })
+            .sort({ date: 1 })
+    .lean();
 
-        return categorizedAssignments;
+// Categorize assignments based on date
+const categorizedAssignments = {
+    live: [],
+    upcoming: []
+};
+
+// Use for...of for better async handling if needed in future
+for (const assignment of assignments) {
+    try {
+        // Convert assignment date to Indian timezone
+        const assignmentDate = new Date(assignment.date);
+        const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        indianAssignmentDate.setHours(0, 0, 0, 0);
+
+        // Convert dates to ISO strings for consistent comparison
+        const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
+        const currentDateStr = indianDate.toISOString().split('T')[0];
+
+        // Explicitly check for live and upcoming dates
+        if (assignmentDateStr === currentDateStr) {
+            categorizedAssignments.live.push(assignment);
+        } else if (assignmentDateStr > currentDateStr) {
+            categorizedAssignments.upcoming.push(assignment);
+        }
+        // Any dates before current date will be filtered out by the initial query
     } catch (error) {
-        console.error('Error in getAssignments:', error);
-        throw error;
+        console.error('Error processing assignment:', error);
+        // Skip invalid assignments instead of failing the entire request
     }
+}
+
+return categorizedAssignments;
+    } catch (error) {
+    console.error('Error in getAssignments:', error);
+    throw error;
+}
 };
 
 const getAllAssignments = async (filters = {}) => {
@@ -153,7 +159,7 @@ const getAllAssignments = async (filters = {}) => {
                 const endDate = new Date(filters.endDate);
                 const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                 const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                
+
                 query.date = {
                     $gte: indianStartDate,
                     $lte: indianEndDate
@@ -188,7 +194,7 @@ const getPastAssignments = async (filters = {}) => {
         const query = {
             date: { $lt: indianDate } // Only get past assignments
         };
-        
+
         if (filters.clusterId) query.clusterId = filters.clusterId;
         if (filters.userId) query.userId = filters.userId;
 
@@ -199,7 +205,7 @@ const getPastAssignments = async (filters = {}) => {
                 const endDate = new Date(filters.endDate);
                 const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                 const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                
+
                 query.date = {
                     $gte: indianStartDate,
                     $lt: indianEndDate
