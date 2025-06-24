@@ -171,7 +171,7 @@ const getAllAssignments = async (filters = {}) => {
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-            .populate('clusterId', 'clusterNo')
+            .populate('clusterId', 'clusterNo clusterName')
             .sort({ date: 1 })
             .lean();
 
