@@ -404,6 +404,16 @@ const ProductSchema = new mongoose.Schema(
 
 module.exports = mongoose.model("Product", ProductSchema);
 
+//cluster assigns
+
+        const currentDate = new Date();
+        const indianDate = new Date(currentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        indianDate.setHours(0, 0, 0, 0);
+
+                // Convert date to Indian timezone for consistent comparison
+        const assignmentDate = new Date(date);
+        const indianDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        indianDate.setHours(0, 0, 0, 0);
 
 // cluster service
 
