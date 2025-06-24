@@ -3,10 +3,8 @@ const Cluster = require('../models/clusterModel');
 
 const assignCluster = async (userId, clusterId, date) => {
     try {
-        // Convert date to Indian timezone for consistent comparison
-        const assignmentDate = new Date(date);
-        const indianDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        indianDate.setHours(0, 0, 0, 0);
+
+        const indianDate = new Date(`${date}T00:00:00.000Z`);
 
         // Check if user has any other assignments on the same date
         const existingUserDateAssignment = await ClusterAssignment.findOne({
@@ -51,7 +49,7 @@ const assignCluster = async (userId, clusterId, date) => {
 
 const getClusterDropdown = async () => {
     try {
-        const clusters = await Cluster.find({}, 'clusterNo _id')
+        const clusters = await Cluster.find({}, 'clusterNo _id clusterName')
             .sort({ clusterNo: 1 })
             .lean();
 
@@ -64,10 +62,9 @@ const getClusterDropdown = async () => {
 
 const getAssignments = async (filters = {}) => {
     try {
-        // Get current date in Indian timezone
-        const currentDate = new Date();
-        const indianDate = new Date(currentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        indianDate.setHours(0, 0, 0, 0);
+       
+        const todayIST = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+        const indianDate = new Date(`${todayIST}T00:00:00.000Z`);
 
         // Build query based on filters
         const query = {};
@@ -116,19 +113,20 @@ const categorizedAssignments = {
 // Use for...of for better async handling if needed in future
 for (const assignment of assignments) {
     try {
-        // Convert assignment date to Indian timezone
-        const assignmentDate = new Date(assignment.date);
-        const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        indianAssignmentDate.setHours(0, 0, 0, 0);
+        // // Convert assignment date to Indian timezone
+        // const assignmentDate = new Date(assignment.date);
+        // const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        // indianAssignmentDate.setHours(0, 0, 0, 0);
 
-        // Convert dates to ISO strings for consistent comparison
-        const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
-        const currentDateStr = indianDate.toISOString().split('T')[0];
+        // // Convert dates to ISO strings for consistent comparison
+        // const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
+        // const currentDateStr = indianDate.toISOString().split('T')[0];
 
+        const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
         // Explicitly check for live and upcoming dates
-        if (assignmentDateStr === currentDateStr) {
+        if (assignmentDateIST === todayIST) {
             categorizedAssignments.live.push(assignment);
-        } else if (assignmentDateStr > currentDateStr) {
+        } else if (assignmentDateIST > todayIST) {
             categorizedAssignments.upcoming.push(assignment);
         }
         // Any dates before current date will be filtered out by the initial query
@@ -139,7 +137,8 @@ for (const assignment of assignments) {
 }
 
 return categorizedAssignments;
-    } catch (error) {
+    } 
+    catch (error) {
     console.error('Error in getAssignments:', error);
     throw error;
 }
