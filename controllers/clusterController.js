@@ -4,8 +4,8 @@ const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomers
 
 const getClusteredCustomers = async (req, res) => {
   try {
-    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || 2;
-    const maxCartridgesPerCluster = parseFloat(req.query.maxCartridgesPerCluster) || 2;
+    const maxCustomersPerCluster = parseInt(req.query.maxCustomersPerCluster) || 20;
+    const maxCartridgesPerCluster = parseFloat(req.query.maxCartridgesPerCluster) || 24;
 
     const clusteredCustomers = await getClusteredCustomerLocations(maxCustomersPerCluster,maxCartridgesPerCluster);
 
