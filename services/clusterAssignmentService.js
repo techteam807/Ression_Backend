@@ -228,10 +228,21 @@ const getPastAssignments = async (filters = {}) => {
     }
 };
 
+const deleteClusterAssignmentById = async (assignmentId) => {
+    const deleted = await ClusterAssignment.findByIdAndDelete(assignmentId);
+
+    if (!deleted) {
+        throw new Error('Assignment not found');
+    }
+
+    return deleted;
+};
+
 module.exports = {
     assignCluster,
     getAssignments,
     getPastAssignments,
     getAllAssignments,
-    getClusterDropdown
+    getClusterDropdown,
+    deleteClusterAssignmentById,
 }; 
