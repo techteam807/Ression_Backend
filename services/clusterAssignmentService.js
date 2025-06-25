@@ -1,5 +1,6 @@
 const ClusterAssignment = require('../models/ClusterAssignmentModel');
 const Cluster = require('../models/clusterModel');
+const { ReplacementStatusEnum } = require('../config/global');
 
 const assignCluster = async (userId, clusterId, date) => {
     try {
@@ -228,10 +229,93 @@ const getPastAssignments = async (filters = {}) => {
     }
 };
 
+const addCustomerToAssignmentold = async (assignmentId, customerId) => {
+    const updated = await ClusterAssignment.updateOne(
+        {
+            _id: assignmentId,
+            'customerStatuses.customerId': customerId
+        },
+        {
+            $set: {
+                'customerStatuses.$.status': ReplacementStatusEnum.DONE,
+                'customerStatuses.$.updatedAt': new Date()
+            }
+        }
+    );
+
+    // If nothing was modified, add new entry
+    if (updated.modifiedCount === 0) {
+        await ClusterAssignment.updateOne(
+            { _id: assignmentId },
+            {
+                $push: {
+                    customerStatuses: {
+                        customerId,
+                        status: ReplacementStatusEnum.DONE,
+                        updatedAt: new Date()
+                    }
+                }
+            }
+        );
+    }
+};
+
+const addCustomerToAssignment = async (assignmentId, customerId, session = null) => {
+  const updateQuery = {
+    _id: assignmentId,
+    'customerStatuses.customerId': customerId,
+  };
+
+  const update = {
+    $set: {
+      'customerStatuses.$.status': ReplacementStatusEnum.DONE,
+      'customerStatuses.$.updatedAt': new Date(),
+    },
+  };
+
+  const options = session ? { session } : {};
+
+  const updated = await ClusterAssignment.updateOne(updateQuery, update, options);
+
+  if (updated.modifiedCount === 0) {
+    await ClusterAssignment.updateOne(
+      { _id: assignmentId },
+      {
+        $push: {
+          customerStatuses: {
+            customerId,
+            status: ReplacementStatusEnum.DONE,
+            updatedAt: new Date(),
+          },
+        },
+      },
+      options
+    );
+  }
+};
+
+const clusterAssignmentById = async (assignmentId) => {
+    const clusterAssignment = await ClusterAssignment.findById(assignmentId)
+        .populate('userId', 'user_name')
+           .populate({
+                path: 'clusterId',
+                populate: {
+                    path: 'customers.customerId',
+                    select: 'display_name contact_number cf_google_map_link'
+                }
+            })
+            .sort({ date: 1 })
+    .lean();
+
+    return clusterAssignment;
+};
+
 module.exports = {
     assignCluster,
     getAssignments,
     getPastAssignments,
     getAllAssignments,
-    getClusterDropdown
+    getClusterDropdown,
+    addCustomerToAssignment,
+    clusterAssignmentById,
 }; 
