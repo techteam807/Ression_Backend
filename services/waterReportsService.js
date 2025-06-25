@@ -16,9 +16,17 @@ const bucket = storage.bucket(process.env.GCS_BUCKET);
  * @param {string} mimetype
  * @returns {Promise<string>} publicUrl
  */
-const createReports = async (reportsData) => {
+const createReportsold = async (reportsData) => {
   return await Reports.create(reportsData);
 };
+
+const createReports = async (reportsData, session = null) => {
+  if (session) {
+    return await Reports.create([reportsData], { session });
+  }
+  return await Reports.create(reportsData);
+};
+
 
 const getReports = async (year, month, filter = {}) => {
   if (year && month) {

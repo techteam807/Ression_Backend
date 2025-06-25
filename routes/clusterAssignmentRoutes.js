@@ -22,4 +22,6 @@ router.get('/past', validateRequest(getAssignmentsValidation, 'query'), clusterA
 // Get cluster dropdown data
 router.get('/clusters', clusterAssignmentController.getClusterDropdown);
 
+router.get('/clusterAssignmentById',clusterAssignmentController.getAssignmentsById);
+
 module.exports = router; 
