@@ -455,11 +455,8 @@ const getAllClusters = async (customer_code) => {
         }
       }
 
-      if (filteredCustomers.length > 0) {
         cluster.customers = filteredCustomers;
         filteredClusters.push(cluster);
-      }
-
     }
 
     return filteredClusters;
