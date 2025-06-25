@@ -24,7 +24,12 @@ const getAssignmentsValidation = Joi.object({
     })
 });
 
+const deleteClusterAssignment = Joi.object({
+id: Joi.string().required()
+})
+
 module.exports = {
     assignClusterValidation,
-    getAssignmentsValidation
+    getAssignmentsValidation,
+    deleteClusterAssignment,
 }; 

@@ -102,10 +102,24 @@ const getPastAssignments = async (req, res) => {
     }
 };
 
+const deleteAssignment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        // console.log(id);
+        const result = await clusterAssignmentService.deleteClusterAssignmentById(id);
+        res.status(200).json({ message: 'Assignment deleted successfully', deleted: result });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+
+
 module.exports = {
     assignCluster,
     getAssignments,
     getPastAssignments,
     getAllAssignments,
-    getClusterDropdown
+    getClusterDropdown,
+    deleteAssignment,
 }; 
