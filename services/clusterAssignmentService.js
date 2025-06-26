@@ -123,6 +123,28 @@ for (const assignment of assignments) {
         // const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
         // const currentDateStr = indianDate.toISOString().split('T')[0];
 
+        const customerStatuses = assignment.customerStatuses || [];
+
+                // Map of customerId => status
+                const statusMap = new Map(
+                    customerStatuses.map(status => [status.customerId.toString(), status.status])
+                );
+
+                // Add the replacement status to each customer
+                if (assignment.clusterId?.customers) {
+                    assignment.clusterId.customers = assignment.clusterId.customers.map(customer => {
+                        const customerIdStr = customer.customerId?._id?.toString();
+
+                        const status = statusMap.get(customerIdStr);
+                        const CustomerReplaceMentStatus = status === 'done' ? true : false;
+
+                        return {
+                            ...customer,
+                            CustomerReplaceMentStatus
+                        };
+                    });
+                }
+
         const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
         // Explicitly check for live and upcoming dates
         if (assignmentDateIST === todayIST) {
@@ -229,6 +251,16 @@ const getPastAssignments = async (filters = {}) => {
     }
 };
 
+const deleteClusterAssignmentById = async (assignmentId) => {
+    const deleted = await ClusterAssignment.findByIdAndDelete(assignmentId);
+
+    if (!deleted) {
+        throw new Error('Assignment not found');
+    }
+
+    return deleted;
+};
+
 const addCustomerToAssignmentold = async (assignmentId, customerId) => {
     const updated = await ClusterAssignment.updateOne(
         {
@@ -295,20 +327,48 @@ const addCustomerToAssignment = async (assignmentId, customerId, session = null)
 };
 
 const clusterAssignmentById = async (assignmentId) => {
-    const clusterAssignment = await ClusterAssignment.findById(assignmentId)
+    const assignment = await ClusterAssignment.findById(assignmentId)
         .populate('userId', 'user_name')
-           .populate({
-                path: 'clusterId',
-                populate: {
-                    path: 'customers.customerId',
-                    select: 'display_name contact_number cf_google_map_link'
-                }
-            })
-            .sort({ date: 1 })
-    .lean();
+        .populate({
+            path: 'clusterId',
+            populate: {
+                path: 'customers.customerId',
+                select: 'display_name contact_number cf_google_map_link'
+            }
+        })
+        .lean();
 
-    return clusterAssignment;
+    if (!assignment) return null;
+
+    try {
+        const customerStatuses = assignment.customerStatuses || [];
+
+        // Map of customerId => status
+        const statusMap = new Map(
+            customerStatuses.map(status => [status.customerId.toString(), status.status])
+        );
+
+        // Add the replacement status to each customer
+        if (assignment.clusterId?.customers) {
+            assignment.clusterId.customers = assignment.clusterId.customers.map(customer => {
+                const customerIdStr = customer.customerId?._id?.toString();
+
+                const status = statusMap.get(customerIdStr);
+                const CustomerReplaceMentStatus = status === 'done';
+
+                return {
+                    ...customer,
+                    CustomerReplaceMentStatus
+                };
+            });
+        }
+    } catch (error) {
+        console.error('Error processing assignment:', error);
+    }
+
+    return assignment;
 };
+
 
 module.exports = {
     assignCluster,
@@ -316,6 +376,7 @@ module.exports = {
     getPastAssignments,
     getAllAssignments,
     getClusterDropdown,
+    deleteClusterAssignmentById,
     addCustomerToAssignment,
     clusterAssignmentById,
 }; 
