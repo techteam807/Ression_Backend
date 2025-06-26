@@ -25,4 +25,6 @@ router.get('/clusters', clusterAssignmentController.getClusterDropdown);
 //delete cluster assigmnet data
 router.delete("/delete/:id",validateRequest(deleteClusterAssignment),clusterAssignmentController.deleteAssignment);
 
+router.get('/clusterAssignmentById',clusterAssignmentController.getAssignmentsById);
+
 module.exports = router; 

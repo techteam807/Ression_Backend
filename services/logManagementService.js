@@ -13,9 +13,17 @@ const getLunchOverlap = (start, end) => {
   return Math.max(0, overlap);
 };
 
-exports.createLog = async (logData) => {
+exports.createLogold = async (logData) => {
     return await LogManagement.create(logData);
 };
+
+exports.createLog = async (logData, session = null) => {
+  if (session) {
+    return await LogManagement.create([logData], { session });
+  }
+  return await LogManagement.create(logData);
+};
+
 
 exports.getAllLogs = async (startDate, endDate, productId, userId, customerId, status ) => {
     const filter = {};
