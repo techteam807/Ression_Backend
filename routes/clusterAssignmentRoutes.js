@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const clusterAssignmentController = require('../controllers/clusterAssignmentController');
-const { assignClusterValidation, getAssignmentsValidation } = require('../validations/clusterAssignmentValidation');
+const { assignClusterValidation, getAssignmentsValidation, deleteClusterAssignment } = require('../validations/clusterAssignmentValidation');
 const {validateRequest} = require('../config/validation');
 
 // Middleware to ensure proper JSON parsing
@@ -21,6 +21,9 @@ router.get('/past', validateRequest(getAssignmentsValidation, 'query'), clusterA
 
 // Get cluster dropdown data
 router.get('/clusters', clusterAssignmentController.getClusterDropdown);
+
+//delete cluster assigmnet data
+router.delete("/delete/:id",validateRequest(deleteClusterAssignment),clusterAssignmentController.deleteAssignment);
 
 router.get('/clusterAssignmentById',clusterAssignmentController.getAssignmentsById);
 
