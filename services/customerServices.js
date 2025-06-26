@@ -1,6 +1,7 @@
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const cluster_Assignment = require("../models/ClusterAssignmentModel.js");
 const Cluster = require("../models/clusterModel.js");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
@@ -14,6 +15,7 @@ const MissedCartidge = require('../models/missedCartidgeModel.js');
 const kmeans = require('ml-kmeans').default;
 const { sendMissedCatridgeMsg, sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 const { default: mongoose } = require("mongoose");
+const { addCustomerToAssignment } = require("./clusterAssignmentService.js");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 const ZOHO_API_URL_SUB = "https://www.zohoapis.in/billing/v1/subscriptions";
@@ -448,7 +450,8 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, geoCoordinates, url, score) => {
+const manageCustomerAndProducto = async (customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId) => {
+  
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -599,8 +602,15 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
     await Report.createReports(generateReports);
   };
 
-  if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0) {
+  if(assignmentId)
+  {
+    await addCustomerToAssignment(assignmentId, CustomerId);
+  }
+
+  if (!Customers.isNew) {
     await sendFirstTimeMsg(customerMobileNumber, customerName);
+    Customers.isNew = true;
+    await Customers.save();
   }
   else {
     await sendWhatsAppMsg(customerMobileNumber, customerName);
@@ -624,6 +634,220 @@ return {
   Customer: Customers,
 };
 };
+
+const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId) => {
+  
+   const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+  let messages = [];
+  let success = false;
+  let errorMessages = [];
+
+  const Customers = await Customer.findOne({ contact_number: customer_code });
+  const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
+  const Users = await User.findById(userId);
+  const clusterAssignment = await cluster_Assignment.findById(assignmentId);
+
+
+  if (!Customers) {
+    errorMessages.push(`Customer not found with code: ${customer_code}`);
+  }
+
+  if (!Users) {
+    errorMessages.push(`User not found with id:${userId}`);
+  }
+
+  if(!clusterAssignment)
+  {
+    errorMessages.push(`clusterAssignment not found with id:${assignmentId}`);
+  }
+
+  if (errorMessages.length > 0) {
+    await session.abortTransaction();
+    session.endSession();
+    return {
+      success: false,
+      errorMessage: { errorMessages },
+    };
+  }
+
+  const customerEXHAUSTEDId = Customers.products;
+  console.log(customerEXHAUSTEDId)
+  const rawMobile = Customers.mobile;
+  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerName = Customers.display_name;
+  // Validate Products
+  const foundProductCodes = ProductS.map((p) => p.productCode);
+  const missingProductCodes = Product_Codes.filter(
+    (code) => !foundProductCodes.includes(code)
+  );
+
+  if (missingProductCodes.length > 0) {
+    messages.push(
+      `Product Not Found With Code : ${missingProductCodes.join(", ")}`
+    );
+  }
+
+  const DeletedProducts = [];
+  const InUseProducts = [];
+  const ExhaustedProducts = [];
+  const NewProducts = [];
+
+  ProductS.forEach((product) => {
+    if (product.isActive) {
+      if (product.productStatus === ProductEnum.EXHAUSTED) {
+        ExhaustedProducts.push(product);
+      } else if (product.productStatus === ProductEnum.IN_USE) {
+        InUseProducts.push(product);
+      } else if (product.productStatus === ProductEnum.NEW) {
+        NewProducts.push(product);
+      }
+    } else {
+      DeletedProducts.push(product);
+    }
+  });
+
+  // Extract product codes
+  const ExhaustedProductCodes = ExhaustedProducts.map((p) => p.productCode);
+  const NewProductCodes = NewProducts.map((p) => p.productCode);
+  const InUseProductCodes = InUseProducts.map((p) => p.productCode);
+  const DeletedProductCodes = DeletedProducts.map((p) => p.productCode);
+  const NotFoundProductCodes = missingProductCodes;
+
+  if (ExhaustedProducts.length > 0) {
+    messages.push(
+      `Product Status Found Exhausted With Codes: ${ExhaustedProductCodes.join(
+        ", "
+      )}`
+    );
+  }
+  if (InUseProducts.length > 0) {
+    messages.push(
+      `Product Status Found In Use With Codes : ${InUseProductCodes.join(", ")}`
+    );
+  }
+  if (DeletedProductCodes.length > 0) {
+    messages.push(`Product Not Active With Codes : ${DeletedProductCodes.join(", ")}`);
+  }
+
+  const ProductIds = ProductS.map((p) => p.id);
+  console.log("p:", ProductIds)
+
+  const CustomerId = Customers.id;
+  console.log("c", CustomerId);
+
+  if (
+    NewProducts.length > 0 &&
+    ExhaustedProductCodes.length === 0 &&
+    InUseProductCodes.length === 0 &&
+    DeletedProductCodes.length === 0 &&
+    NotFoundProductCodes.length === 0
+  ) {
+    // Remove existing products from customer and update their status
+    if (Customers.products.length > 0) {
+      await Product.updateMany(
+        { _id: { $in: Customers.products } },
+        {
+          $set: { productStatus: ProductEnum.EXHAUSTED },
+        },
+        { session }
+      );
+      Customers.products = [];
+      await Customers.save({ session });
+
+      const genrateLogForEXHAUSTED = {
+        customerId: CustomerId,
+        products: customerEXHAUSTEDId,
+        userId: userId,
+        status: ProductEnum.EXHAUSTED,
+      }
+
+      await Log.createLog(genrateLogForEXHAUSTED,session)
+    }
+
+    // Attach new products and update their status
+    Customers.products = NewProducts.map((p) => p._id);
+    await Customers.save({ session });
+
+    await Product.updateMany(
+      { productCode: { $in: NewProductCodes } },
+      {
+        $set: {
+          productStatus: ProductEnum.IN_USE,
+        }
+      },
+      { session }
+    );
+
+    const genrateLogForIN_USE = {
+      customerId: CustomerId,
+      products: NewProducts.map((p) => p.id),
+      userId: userId,
+      status: ProductEnum.IN_USE,
+    };
+
+    await geoLocation.storeGeoLocation(CustomerId, geoCoordinates, session);
+    await Log.createLog(genrateLogForIN_USE,session);
+
+    if (score) {
+      const generateReports = {
+        customerId: CustomerId,
+        waterScore: score,
+        date: new Date() 
+      };
+    await Report.createReports(generateReports,session);
+  };
+
+  if(assignmentId)
+  {
+    await addCustomerToAssignment(assignmentId, CustomerId,session);
+  }
+
+  if (!Customers.isNew) {
+    await sendFirstTimeMsg(customerMobileNumber, customerName);
+    Customers.isNew = true;
+    await Customers.save({ session });
+  }
+  else {
+    await sendWhatsAppMsg(customerMobileNumber, customerName);
+  }
+
+  messages.push(
+    `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
+  );
+  success = true;
+}
+
+  await session.commitTransaction();
+    session.endSession();
+
+return {
+  success,
+  message: messages,
+  ProductCodes: {
+    notFound: NotFoundProductCodes.join(", "),
+    exhausted: ExhaustedProductCodes.join(", "),
+    inUse: InUseProductCodes.join(", "),
+    deleted: DeletedProductCodes.join(", "),
+  },
+  Customer: Customers,
+};
+
+  }
+  catch (error)
+  {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Transaction failed:", error);
+    return {
+      success: false,
+      errorMessage: { error: error.message },
+    };
+  }
+};
+
 
 const getCustomerDropdown = async (filter) => {
   try {

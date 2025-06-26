@@ -49,6 +49,7 @@ const CustomerSchema = new mongoose.Schema(
     tags: [String],
     cf_google_map_link:String,
     isSubscription:Boolean,
+    isNew: { type: Boolean, default: false },
     geoCoordinates: {
       type: { type: String, enum: ['Point']},
       coordinates: { type: [Number] },// [longitude, latitude]  

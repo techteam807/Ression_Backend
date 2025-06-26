@@ -203,15 +203,16 @@ const associateProductWithCustomer = async (customerId, productId) => {
     return await ProductS.findOne({productCode:product_code});
   };
 
-  const getMultipleProductByCode = async (product_codes) => {
+  const getMultipleProductByCodeold = async (product_codes) => {
     return await ProductS.find({productCode: {$in:product_codes}});
   };
 
-  // const getMultipleProductByCode = async (product_codes, session = null) => {
-  //   const query = ProductS.find({ productCode: { $in: product_codes } });
-  //   if (session) query.session(session);
-  //   return await query.exec();
-  // };
+  const getMultipleProductByCode = async (product_codes, session = null) => {
+  const query = ProductS.find({ productCode: { $in: product_codes } });
+  if (session) query.session(session);
+  return await query;
+};
+
   
   const uploadProducts = async(products) => {
     const insertedProducts = [];

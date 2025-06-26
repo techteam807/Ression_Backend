@@ -55,7 +55,7 @@ const Products =  require("../models/productModel");
 //     }
 // };
 
-const storeGeoLocation = async (customerId, geoCoordinates) => {
+const storeGeoLocationold = async (customerId, geoCoordinates) => {
   const customer = await Customers.findById(customerId);
 
   if (!customer) {
@@ -101,6 +101,55 @@ const storeGeoLocation = async (customerId, geoCoordinates) => {
       status: true,
       message: 'GeoLocation created successfully',
       data: newGeo
+    };
+  }
+};
+
+const storeGeoLocation = async (customerId, geoCoordinates, session = null) => {
+  const customer = await Customers.findById(customerId).session(session);
+
+  if (!customer) {
+    return {
+      status: false,
+      message: `Customer Not Found With Id ${customerId}`
+    };
+  }
+
+  const existingLocation = await GeoLocation.findOne({ customerId }).session(session);
+
+  const newCoordinates = (
+    geoCoordinates &&
+    geoCoordinates.longitude &&
+    geoCoordinates.latitude
+  ) ? {
+    type: 'Point',
+    coordinates: [
+      parseFloat(geoCoordinates.longitude),
+      parseFloat(geoCoordinates.latitude)
+    ]
+  } : null;
+
+  if (existingLocation) {
+    // Update only geoCoordinates, do not change mainGeoCoordinates
+    if (newCoordinates) {
+      existingLocation.geoCoordinates = newCoordinates;
+      await existingLocation.save({session});
+    }
+    return {
+      status: true,
+      message: 'GeoLocation updated successfully',
+      data: existingLocation
+    };
+  } else {
+    // First time insert, populate both geoCoordinates and mainGeoCoordinates
+    const newGeo = await GeoLocation.create(
+      [{ customerId, geoCoordinates: newCoordinates, MaingeoCoordinates: newCoordinates }],
+      { session }
+    );
+    return {
+      status: true,
+      message: 'GeoLocation created successfully',
+      data: newGeo[0],
     };
   }
 };
