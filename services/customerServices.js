@@ -648,7 +648,7 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
   const Customers = await Customer.findOne({ contact_number: customer_code });
   const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
   const Users = await User.findById(userId);
-  const clusterAssignment = await cluster_Assignment.findById(assignmentId);
+  // const clusterAssignment = await cluster_Assignment.findById(assignmentId);
 
 
   if (!Customers) {
@@ -659,10 +659,10 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
     errorMessages.push(`User not found with id:${userId}`);
   }
 
-  if(!clusterAssignment)
-  {
-    errorMessages.push(`clusterAssignment not found with id:${assignmentId}`);
-  }
+  // if(!clusterAssignment)
+  // {
+  //   errorMessages.push(`clusterAssignment not found with id:${assignmentId}`);
+  // }
 
   if (errorMessages.length > 0) {
     await session.abortTransaction();
