@@ -108,10 +108,10 @@ const ManageCustomerAndProducts = async(req, res) => {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    if(!assignmentId)
-    {
-      return errorResponse(res, "AssignmentId Not Provided", 400, null);
-    }
+    // if(!assignmentId)
+    // {
+    //   return errorResponse(res, "AssignmentId Not Provided", 400, null);
+    // }
 
     const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url, score, assignmentId);
 
