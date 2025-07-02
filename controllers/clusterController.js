@@ -36,7 +36,16 @@ const reassignMultipleCustomers = async (req, res) => {
       return errorResponse(res, "Reassignments array is required.", 400); 
     }
 
-    await reassignMultipleCustomersToClusters(reassignments);
+    const { skippedCustomers } = await reassignMultipleCustomersToClusters(reassignments);
+
+    if (skippedCustomers.length > 0) {
+      return successResponse(
+        res,
+        `Some customers were reassigned successfully, but the following had no geolocation and were skipped: ${skippedCustomers.join(', ')}`,
+        { skippedCustomers }
+      );
+    }
+
     return successResponse(res, "Customers reassigned successfully");
   } catch (error) {
     console.log("Hello", error.message)
