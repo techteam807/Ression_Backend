@@ -598,7 +598,7 @@ const getAllClustersOld = async () => {
   }
 };
 
-const getAllClusters = async (customer_code) => {
+const getAllClusters_old = async (customer_code) => {
   try {
     const clusters = await Cluster.find()
       .populate("customers.customerId")
@@ -653,6 +653,75 @@ const getAllClusters = async (customer_code) => {
         filteredClusters.push(cluster);
     }
 
+    return filteredClusters;
+  } catch (error) {
+    throw new Error("Failed to fetch clusters: " + error.message);
+  }
+};
+
+const getAllClusters = async (customer_code) => {
+  try {
+    // Step 1: Fetch all clusters and populate customer data
+    const clusters = await Cluster.find()
+      .populate("customers.customerId")
+      .lean();
+
+    const filteredClusters = [];
+    const allCustomerIds = [];
+
+    // Step 2: Collect all customer IDs for GeoLocation lookup
+    for (const cluster of clusters) {
+      for (const cust of cluster.customers) {
+        if (cust.customerId) {
+          allCustomerIds.push(cust.customerId._id.toString());
+        }
+      }
+    }
+
+    // Step 3: Bulk fetch GeoLocations
+    const geoData = await GeoLocation.find({
+      customerId: { $in: allCustomerIds },
+    }).lean();
+
+    const geoMap = new Map();
+    for (const geo of geoData) {
+      geoMap.set(geo.customerId.toString(), geo.MaingeoCoordinates);
+    }
+
+    // Step 4: Process each cluster
+    for (const cluster of clusters) {
+      const filteredCustomers = [];
+      const cartridgeSizeCounts = {};
+
+      for (const cust of cluster.customers) {
+        if (!cust.customerId) continue;
+
+        const customerData = cust.customerId;
+        const contactNumber = customerData.contact_number;
+
+        if (!customer_code || contactNumber === customer_code) {
+          cust.customerId = customerData._id;
+          cust.name = customerData.display_name || customerData.name;
+          cust.contact_number = contactNumber;
+          cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
+          cust.cf_cartridge_size = customerData.cf_cartridge_size;
+
+          const geo = geoMap.get(customerData._id.toString());
+          cust.geoCoordinates = geo || null;
+
+          const size = customerData.cf_cartridge_size || "Unknown";
+          cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+          filteredCustomers.push(cust);
+        }
+      }
+
+      // Add filtered data to cluster
+      cluster.customers = filteredCustomers;
+      cluster.cartridgeSizeCounts = cartridgeSizeCounts;
+
+      filteredClusters.push(cluster);
+    }
     return filteredClusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
@@ -757,6 +826,8 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  const skippedCustomers = [];
+
   try {
     const MAX_CUSTOMERS = 20;
     const MAX_CARTRIDGES = 24;
@@ -765,19 +836,6 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     const customerIds = reassignments.map((r) => r.customerId);
     const customers = await Customer.find({ _id: { $in: customerIds } }).session(session).lean();
     const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
-
-    // 1. Remove from all clusters
-    await Cluster.updateMany(
-      { "customers.customerId": { $in: customerIds.map(id => new mongoose.Types.ObjectId(id)) } },
-      {
-        $pull: {
-          customers: {
-            customerId: { $in: customerIds.map(id => new mongoose.Types.ObjectId(id)) }
-          }
-        }
-      },
-      { session }
-    );
 
     // 2. Recalculate cartridge_qty for all clusters after removal
     const allClusters = await Cluster.find().session(session);
@@ -794,6 +852,35 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     // 3. Assign each customer individually
     for (const { customerId, newClusterNo, indexNo } of reassignments) {
       const customer = customerMap.get(customerId);
+      
+      if (!customer) {
+        skippedCustomers.push(`Unknown customer ID: ${customerId}`);
+        continue;
+      }
+
+      // ✅ Check GeoLocation & MaingeoCoordinates
+      const geoData = await GeoLocation.findOne({ customerId }).lean();
+      const hasValidGeo =
+        geoData &&
+        geoData.MaingeoCoordinates &&
+        Array.isArray(geoData.MaingeoCoordinates.coordinates) &&
+        geoData.MaingeoCoordinates.coordinates.length === 2;
+
+      if (!hasValidGeo) {
+        skippedCustomers.push(customer.display_name || `Customer ID ${customerId}`);
+        continue; // Don't remove or reassign
+      }
+
+      await Cluster.updateMany(
+        { "customers.customerId": new mongoose.Types.ObjectId(customerId) },
+        {
+          $pull: {
+            customers: { customerId: new mongoose.Types.ObjectId(customerId) },
+          },
+        },
+        { session }
+      );
+
       const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
 
       let cluster = await Cluster.findOne({ clusterNo: newClusterNo }).session(session);
@@ -842,8 +929,14 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       console.log(`Assigned to cluster ${newClusterNo}: ${assigned}`);
     }
 
+    console.log("skip:",skippedCustomers);
+    
+
     await session.commitTransaction();
     session.endSession();
+
+    return { skippedCustomers };
+
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
