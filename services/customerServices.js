@@ -83,7 +83,7 @@ const fetchAndStoreCustomersWithRefreshOld = async (accessToken) => {
   }
 };
 
-const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
+const fetchAndStoreCustomersWithRefreshO = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -205,6 +205,174 @@ const isSubscriptionNow = subscribedCustomerIds.includes(zohoCustomer.customer_i
     if (newCustomers.length > 0) {
       await Customer.insertMany(newCustomers);
     }
+
+    if (updates.length > 0) {
+      await Customer.bulkWrite(updates);
+    }
+
+    return {
+      message: "Sync complete",
+      added: newCustomers.length,
+      updated: updates.length,
+      // subscriptionStatuses,
+    };
+  } catch (error) {
+    console.error("Error in fetchAndStoreCustomers:", error.message);
+    throw error;
+  }
+};
+
+const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
+  try {
+    const response = await axios.get(ZOHO_API_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const subscriptionsResponse  = await axios.get(ZOHO_API_URL_SUB,{
+      headers: { Authorization: `Bearer ${accessToken}`},
+    });
+
+    const subscriptions = subscriptionsResponse.data.subscriptions || [];
+
+     const subscribedCustomerIds = subscriptions.map(sub => sub.customer_id);
+
+    const subscriptionStatuses = subscriptions.map(sub => ({
+      customer_id: sub.customer_id,
+      status: sub.status
+    }));
+    
+
+    if (!response.data || !response.data.customers) {
+      throw new Error("Invalid response from Zoho API");
+    }
+
+    const zohoCustomers = response.data.customers;
+    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id);
+
+    const existingCustomers = await Customer.find(
+      { customer_id: { $in: zohoCustomerIds } }
+    );
+
+    const existingCustomerMap = new Map(
+      existingCustomers.map((c) => [c.customer_id, c.toObject()])
+    );
+
+    const newCustomers = [];
+    const updates = [];
+
+    const fieldsToCompare = [
+      "display_name",
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "mobile",
+      "contact_number",
+      "customer_name",
+      "cf_cartridge_qty",
+      "cf_google_map_link"
+    ];
+
+
+    for (const zohoCustomer of zohoCustomers) {
+      const existing = existingCustomerMap.get(zohoCustomer.customer_id);
+      const isSubscriptionNow = subscribedCustomerIds.includes(zohoCustomer.customer_id);
+
+      if (!existing) {
+
+        // if (zohoCustomer.cf_google_map_link) {
+        //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+        //   if (coords) {
+        //     zohoCustomer.geoCoordinates = {
+        //       type: 'Point',
+        //       coordinates: [coords.lng, coords.lat]
+        //     };
+        //   }
+        // }
+        // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
+        const newCustomer = new Customer({
+          ...zohoCustomer,
+          geoCoordinates: zohoCustomer.geoCoordinates || undefined,
+          isSubscription: isSubscriptionNow,
+        });
+        newCustomers.push(newCustomer);
+      } else {
+        let hasChanges = false;
+
+        for (const field of fieldsToCompare) {
+          const newValue = zohoCustomer[field] ?? null;
+          const oldValue = existing[field] ?? null;
+
+          if (newValue !== oldValue) {
+            hasChanges = true;
+            break;
+          }
+        }
+        if (existing.isSubscription !== isSubscriptionNow) {
+          hasChanges = true;
+        }
+        if (hasChanges) {
+          // if (zohoCustomer.cf_google_map_link) {
+          //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          //   if (coords) {
+          //     zohoCustomer.geoCoordinates = {
+          //       type: 'Point',
+          //       coordinates: [coords.lng, coords.lat]
+          //     };
+          //   }
+          // }
+
+          // // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
+          // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
+          updates.push({
+            updateOne: {
+              filter: { customer_id: zohoCustomer.customer_id },
+              update: {
+                $set:
+                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined, isSubscription: isSubscriptionNow },
+              }
+            },
+          });
+        }
+      }
+    }
+
+    let inserted = [];
+
+    if (newCustomers.length > 0) {
+      inserted = await Customer.insertMany(newCustomers);
+
+      const fallbackCluster = 7;
+      const fallback = await Cluster.findOne({clusterNo : fallbackCluster});
+
+      const insertedCustomerRefs = inserted.map((cust, idx) => ({
+        customerId: cust._id,
+          sequenceNo: (fallback?.customers?.length || 0) + idx + 1,
+    }));
+
+    const totalCartridgeQty = inserted.reduce((sum, c) => {
+        const qty = parseFloat(c.cf_cartridge_qty) || 0;
+        return sum + qty;
+      }, fallback?.cartridge_qty || 0);
+
+      if (fallback) {
+        await Cluster.updateOne(
+          { clusterNo: fallbackCluster },
+          {
+            $push: { customers: { $each: insertedCustomerRefs } },
+            $set: { cartridge_qty: totalCartridgeQty },
+          }
+        );
+      } else {
+        await Cluster.create({
+          clusterNo: fallbackCluster,
+          customers: insertedCustomerRefs,
+          cartridge_qty: totalCartridgeQty,
+        });
+      }
+  }
 
     if (updates.length > 0) {
       await Customer.bulkWrite(updates);

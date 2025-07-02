@@ -24,7 +24,7 @@ const getClusters = async (req, res) => {
 
     return successResponse(res, "Clusters fetched successfully", null, clusters);
   } catch (error) {
-    return errorResponse(res, "Failed to fetch clusters", 500, error.message || error);
+    return errorResponse(res, error.message, 500, error.message || error);
   }
 };
 

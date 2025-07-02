@@ -29,6 +29,10 @@ const ClusterSchema = new mongoose.Schema(
     sequenceNo: {
       type: Number,
        default: 0,
+    },
+    indexNo: {
+      type: Number,
+      default: 0,
     }
   }
 ]
