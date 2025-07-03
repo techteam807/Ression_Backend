@@ -976,19 +976,19 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     const customers = await Customer.find({ _id: { $in: customerIds } }).session(session).lean();
     const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
 
-    // 1. Load all clusters initially
-    const allClusters = await Cluster.find().session(session);
+    // // 1. Load all clusters initially
+    // const allClusters = await Cluster.find().session(session);
 
-    // 2. Recalculate cartridge_qty for all clusters (based on actual data)
-    for (const cluster of allClusters) {
-      const updatedCustomerIds = cluster.customers.map((c) => c.customerId.toString());
-      const updatedQty = updatedCustomerIds.reduce((sum, id) => {
-        const c = customerMap.get(id);
-        return sum + (parseFloat(c?.cf_cartridge_qty) || 0);
-      }, 0);
-      cluster.cartridge_qty = updatedQty;
-      await cluster.save({ session });
-    }
+    // // 2. Recalculate cartridge_qty for all clusters (based on actual data)
+    // for (const cluster of allClusters) {
+    //   const updatedCustomerIds = cluster.customers.map((c) => c.customerId.toString());
+    //   const updatedQty = updatedCustomerIds.reduce((sum, id) => {
+    //     const c = customerMap.get(id);
+    //     return sum + (parseFloat(c?.cf_cartridge_qty) || 0);
+    //   }, 0);
+    //   cluster.cartridge_qty = updatedQty;
+    //   await cluster.save({ session });
+    // }
 
     // 3. Assign each customer individually
     for (const { customerId, newClusterNo, indexNo } of reassignments) {
@@ -1066,7 +1066,20 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       };
 
       cluster.customers.push(newCustomerObj);
-      cluster.cartridge_qty += cartridgeQty;
+
+      const fullCustomerIds = [
+        ...new Set(cluster.customers.map(c => c.customerId.toString()))
+      ];
+
+      const fullCustomers = await Customer.find({
+        _id: { $in: fullCustomerIds }
+      }).session(session).lean();
+
+      cluster.cartridge_qty = fullCustomers.reduce((sum, c) => {
+        const qty = parseFloat(c?.cf_cartridge_qty);
+        return sum + (isNaN(qty) ? 0 : qty);
+      }, 0);
+
       await cluster.save({ session });
 
       console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
