@@ -99,7 +99,7 @@ const getAssignments = async (filters = {}) => {
                 path: 'clusterId',
                 populate: {
                     path: 'customers.customerId',
-                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty'
+                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size'
                 }
             })
             .sort({ date: 1 })
@@ -149,6 +149,15 @@ const getAssignments = async (filters = {}) => {
                         const bIndex = b.customerId?.indexNo ?? Infinity;
                         return aIndex - bIndex;
                     });
+
+                    const cartridgeSizeCounts = {};
+    for (const customer of assignment.clusterId.customers) {
+        console.log("cust:",customer);
+        
+        const size =  customer.customerId?.cf_cartridge_size || "Unknown";
+        cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+    }
+    assignment.cartridgeSizeCounts = cartridgeSizeCounts
                 }
 
                 const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
