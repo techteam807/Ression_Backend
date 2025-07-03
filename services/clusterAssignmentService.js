@@ -202,7 +202,7 @@ const getAllAssignments = async (filters = {}) => {
             .populate('userId', 'user_name')
             .populate('clusterId', 'clusterNo clusterName')
             .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
-            .sort({ date: 1 })
+            .sort({ date: -1  })
             .lean();
 
         return assignments;
