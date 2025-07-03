@@ -973,9 +973,9 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
     await addCustomerToAssignment(assignmentId, CustomerId,session);
   }
 
-  if (!Customers.isNew) {
+  if (!Customers.installation) {
     await sendFirstTimeMsg(customerMobileNumber, customerName);
-    Customers.isNew = true;
+    Customers.installation = true;
     await Customers.save({ session });
   }
   else {

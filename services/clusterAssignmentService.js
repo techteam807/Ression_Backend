@@ -63,8 +63,8 @@ const getClusterDropdown = async () => {
 
 const getAssignments = async (filters = {}) => {
     try {
-       
-        const todayIST = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+
+        const todayIST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
         const indianDate = new Date(`${todayIST}T00:00:00.000Z`);
 
         // Build query based on filters
@@ -95,7 +95,7 @@ const getAssignments = async (filters = {}) => {
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-           .populate({
+            .populate({
                 path: 'clusterId',
                 populate: {
                     path: 'customers.customerId',
@@ -103,27 +103,27 @@ const getAssignments = async (filters = {}) => {
                 }
             })
             .sort({ date: 1 })
-    .lean();
+            .lean();
 
-// Categorize assignments based on date
-const categorizedAssignments = {
-    live: [],
-    upcoming: []
-};
+        // Categorize assignments based on date
+        const categorizedAssignments = {
+            live: [],
+            upcoming: []
+        };
 
-// Use for...of for better async handling if needed in future
-for (const assignment of assignments) {
-    try {
-        // // Convert assignment date to Indian timezone
-        // const assignmentDate = new Date(assignment.date);
-        // const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        // indianAssignmentDate.setHours(0, 0, 0, 0);
+        // Use for...of for better async handling if needed in future
+        for (const assignment of assignments) {
+            try {
+                // // Convert assignment date to Indian timezone
+                // const assignmentDate = new Date(assignment.date);
+                // const indianAssignmentDate = new Date(assignmentDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                // indianAssignmentDate.setHours(0, 0, 0, 0);
 
-        // // Convert dates to ISO strings for consistent comparison
-        // const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
-        // const currentDateStr = indianDate.toISOString().split('T')[0];
+                // // Convert dates to ISO strings for consistent comparison
+                // const assignmentDateStr = indianAssignmentDate.toISOString().split('T')[0];
+                // const currentDateStr = indianDate.toISOString().split('T')[0];
 
-        const customerStatuses = assignment.customerStatuses || [];
+                const customerStatuses = assignment.customerStatuses || [];
 
                 // Map of customerId => status
                 const statusMap = new Map(
@@ -143,28 +143,34 @@ for (const assignment of assignments) {
                             CustomerReplaceMentStatus
                         };
                     });
+
+                    assignment.clusterId.customers.sort((a, b) => {
+                        const aIndex = a.customerId?.indexNo ?? Infinity;
+                        const bIndex = b.customerId?.indexNo ?? Infinity;
+                        return aIndex - bIndex;
+                    });
                 }
 
-        const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-        // Explicitly check for live and upcoming dates
-        if (assignmentDateIST === todayIST) {
-            categorizedAssignments.live.push(assignment);
-        } else if (assignmentDateIST > todayIST) {
-            categorizedAssignments.upcoming.push(assignment);
+                const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                // Explicitly check for live and upcoming dates
+                if (assignmentDateIST === todayIST) {
+                    categorizedAssignments.live.push(assignment);
+                } else if (assignmentDateIST > todayIST) {
+                    categorizedAssignments.upcoming.push(assignment);
+                }
+                // Any dates before current date will be filtered out by the initial query
+            } catch (error) {
+                console.error('Error processing assignment:', error);
+                // Skip invalid assignments instead of failing the entire request
+            }
         }
-        // Any dates before current date will be filtered out by the initial query
-    } catch (error) {
-        console.error('Error processing assignment:', error);
-        // Skip invalid assignments instead of failing the entire request
-    }
-}
 
-return categorizedAssignments;
-    } 
+        return categorizedAssignments;
+    }
     catch (error) {
-    console.error('Error in getAssignments:', error);
-    throw error;
-}
+        console.error('Error in getAssignments:', error);
+        throw error;
+    }
 };
 
 const getAllAssignments = async (filters = {}) => {
@@ -195,7 +201,7 @@ const getAllAssignments = async (filters = {}) => {
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
             .populate('clusterId', 'clusterNo clusterName')
-            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty'})
+            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
             .sort({ date: 1 })
             .lean();
 
@@ -294,37 +300,37 @@ const addCustomerToAssignmentold = async (assignmentId, customerId) => {
 };
 
 const addCustomerToAssignment = async (assignmentId, customerId, session = null) => {
-  const updateQuery = {
-    _id: assignmentId,
-    'customerStatuses.customerId': customerId,
-  };
+    const updateQuery = {
+        _id: assignmentId,
+        'customerStatuses.customerId': customerId,
+    };
 
-  const update = {
-    $set: {
-      'customerStatuses.$.status': ReplacementStatusEnum.DONE,
-      'customerStatuses.$.updatedAt': new Date(),
-    },
-  };
-
-  const options = session ? { session } : {};
-
-  const updated = await ClusterAssignment.updateOne(updateQuery, update, options);
-
-  if (updated.modifiedCount === 0) {
-    await ClusterAssignment.updateOne(
-      { _id: assignmentId },
-      {
-        $push: {
-          customerStatuses: {
-            customerId,
-            status: ReplacementStatusEnum.DONE,
-            updatedAt: new Date(),
-          },
+    const update = {
+        $set: {
+            'customerStatuses.$.status': ReplacementStatusEnum.DONE,
+            'customerStatuses.$.updatedAt': new Date(),
         },
-      },
-      options
-    );
-  }
+    };
+
+    const options = session ? { session } : {};
+
+    const updated = await ClusterAssignment.updateOne(updateQuery, update, options);
+
+    if (updated.modifiedCount === 0) {
+        await ClusterAssignment.updateOne(
+            { _id: assignmentId },
+            {
+                $push: {
+                    customerStatuses: {
+                        customerId,
+                        status: ReplacementStatusEnum.DONE,
+                        updatedAt: new Date(),
+                    },
+                },
+            },
+            options
+        );
+    }
 };
 
 const clusterAssignmentById = async (assignmentId) => {
@@ -362,6 +368,16 @@ const clusterAssignmentById = async (assignmentId) => {
                     CustomerReplaceMentStatus
                 };
             });
+
+            console.log("assignment.clusterId?.customers:", assignment.clusterId?.customers);
+
+
+            assignment.clusterId.customers.sort((a, b) => {
+                const aIndex = a.indexNo ?? Infinity;
+                const bIndex = b.indexNo ?? Infinity;
+                return aIndex - bIndex;
+            });
+
         }
     } catch (error) {
         console.error('Error processing assignment:', error);
