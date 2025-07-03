@@ -966,6 +966,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
   session.startTransaction();
 
   const skippedCustomers = [];
+  const affectedClusterIds = new Set(); 
 
   try {
     const MAX_CUSTOMERS = 20;
@@ -1011,6 +1012,12 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       //   skippedCustomers.push(customer.display_name || `Customer ID ${customerId}`);
       //   continue; // Don't remove or reassign
       // }
+
+      const originalClusters = await Cluster.find({ "customers.customerId": new mongoose.Types.ObjectId(customerId) }).session(session);
+      for (const cluster of originalClusters) {
+        affectedClusterIds.add(cluster._id.toString()); // Mark old cluster for recalculation
+      }
+
 
       // ✅ Only remove if customer is valid and will be reassigned
       await Cluster.updateMany(
@@ -1066,23 +1073,28 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       };
 
       cluster.customers.push(newCustomerObj);
+      affectedClusterIds.add(cluster._id.toString());
 
-      const fullCustomerIds = [
-        ...new Set(cluster.customers.map(c => c.customerId.toString()))
-      ];
+      await cluster.save({ session });
 
-      const fullCustomers = await Customer.find({
-        _id: { $in: fullCustomerIds }
+      console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
+    }
+
+    for (const clusterId of affectedClusterIds) {
+      const cluster = await Cluster.findById(clusterId).session(session);
+      if (!cluster) continue;
+
+      const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+      const customersInCluster = await Customer.find({
+        _id: { $in: customerIdsInCluster },
       }).session(session).lean();
 
-      cluster.cartridge_qty = fullCustomers.reduce((sum, c) => {
+      cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
         const qty = parseFloat(c?.cf_cartridge_qty);
         return sum + (isNaN(qty) ? 0 : qty);
       }, 0);
 
       await cluster.save({ session });
-
-      console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
     }
 
     await session.commitTransaction();
