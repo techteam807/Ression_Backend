@@ -45,6 +45,53 @@ const getReports = async (year, month, filter = {}) => {
   return await Reports.find(filter).populate('customerId', 'display_name');
 };
 
+const getReportsnew = async (year, month, filter = {}) => {
+  const reportFilter = {};
+
+  if (year && month) {
+    reportFilter.$expr = {
+      $and: [
+        { $eq: [{ $year: "$date" }, year] },
+        { $eq: [{ $month: "$date" }, month] }
+      ]
+    };
+  } else if (year) {
+    reportFilter.$expr = { $eq: [{ $year: "$date" }, year] };
+  } else if (month) {
+    reportFilter.$expr = { $eq: [{ $month: "$date" }, month] };
+  }
+
+  // 1. Get all customers (filter on isSubscription if needed)
+  const customers = await Customers.find({ isSubscription: true }).select('display_name _id contact_number');
+
+  // 2. Get all reports for the selected date filter
+  const reports = await Reports.find(reportFilter).lean();
+
+  // 3. Group reports by customerId
+  const reportsByCustomer = {};
+  for (const report of reports) {
+    const customerId = report.customerId?.toString();
+    if (!reportsByCustomer[customerId]) {
+      reportsByCustomer[customerId] = [];
+    }
+    reportsByCustomer[customerId].push(report);
+  }
+
+  // 4. Merge reports with customers
+  const result = customers.map(customer => {
+    const customerIdStr = customer._id.toString();
+    return {
+      ...customer.toObject(),
+      reports: reportsByCustomer[customerIdStr] || []
+    };
+  });
+
+  console.log("res:",result);
+  
+
+return result;
+};
+
 const generateWaterReports = async (customerId, logIds, docUrl) => {
   const reports = await Reports.find({
     customerId,
