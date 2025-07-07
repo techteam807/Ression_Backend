@@ -431,7 +431,10 @@ const fetchAndStoreCustomers = async (accessToken) => {
   }
 };
 
-const getAllcustomers = async (search, page, limit, isSubscription) => {
+const getAllcustomers = async (search, page, limit, isSubscription, Day) => {
+  console.log(search)
+  console.log(Day);
+  
   let filter = search
     ? {
       $or: [
@@ -451,6 +454,11 @@ const getAllcustomers = async (search, page, limit, isSubscription) => {
     filter.isSubscription = true;
   } else if (isSubscription === "false") {
     filter.isSubscription = false;
+  }
+
+  if(Day)
+  {
+    filter.cf_replacement_day = Day;
   }
 
 
