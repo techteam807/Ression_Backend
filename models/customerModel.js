@@ -50,6 +50,7 @@ const CustomerSchema = new mongoose.Schema(
     cf_google_map_link:String,
     isSubscription:Boolean,
     installation: { type: Boolean, default: false },
+    cf_detailed_address:String,
     geoCoordinates: {
       type: { type: String, enum: ['Point']},
       coordinates: { type: [Number] },// [longitude, latitude]  
