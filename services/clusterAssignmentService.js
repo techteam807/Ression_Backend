@@ -99,7 +99,7 @@ const getAssignments = async (filters = {}) => {
                 path: 'clusterId',
                 populate: {
                     path: 'customers.customerId',
-                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size'
+                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size cf_detailed_address'
                 }
             })
             .sort({ date: 1 })

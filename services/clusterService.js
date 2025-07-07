@@ -1138,7 +1138,7 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   const route = order.map((i) => customers[i]);
 
   return {
-    route,
+    route:customers,
     googleRouteData: data.routes[0],
   };
 }
@@ -1152,16 +1152,19 @@ const fetchOptimizedRoutes = async (clusterNo) => {
   const results = [];
 
   for (const cluster of clusters) {
-    const customers = cluster.customers
+    let  customers = cluster.customers
       .filter((c) => c.geoCoordinates && Array.isArray(c.geoCoordinates.coordinates))
       .map((c) => ({
         customerId: c.customerId?._id?.toString?.() || c.customerId.toString?.(),
         name: c.name,
+        indexNo: c.indexNo, 
         coord: {
           lat: c.geoCoordinates.coordinates[1],
           lng: c.geoCoordinates.coordinates[0],
         },
       }));
+
+      customers = customers.sort((a, b) => a.indexNo - b.indexNo);
 
     const { route: optimizedRoute, googleRouteData } = await getOptimizedRouteFromGoogle(warehouseLocation, customers);
 

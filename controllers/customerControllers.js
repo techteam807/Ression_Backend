@@ -48,8 +48,8 @@ const storeCustomers = async (req, res) => {
 
 const getCustomers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10 , isSubscription} = req.query;
-    const result = await getAllcustomers(search, page, limit, isSubscription);
+    const { search, page = 1, limit = 10 , isSubscription, Day } = req.query;
+    const result = await getAllcustomers(search, page, limit, isSubscription, Day);
     const { customers, ...pagination } = result;
     return successResponse(
       res,
