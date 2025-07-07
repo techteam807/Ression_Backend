@@ -113,7 +113,27 @@ const deleteAssignment = async (req, res) => {
     }
 };
 
+const getAssignmentsById = async (req, res) => {
+    try 
+    {   const {assignmentId} = req.query;
+        const result = await clusterAssignmentService.clusterAssignmentById(assignmentId);
 
+        res.status(200).json({
+            status:true,
+            message:"Get Cluster By Id",
+            data: result,
+        })
+    }
+    catch (error)
+    {
+    console.error('Error in getAssignmentsById:', error);
+        res.status(400).json({
+            success: false,
+            message: error.message || 'Error fetching assignment By Id',
+            error: error.message
+        });
+    }
+}
 
 module.exports = {
     assignCluster,
@@ -122,4 +142,5 @@ module.exports = {
     getAllAssignments,
     getClusterDropdown,
     deleteAssignment,
+    getAssignmentsById,
 }; 

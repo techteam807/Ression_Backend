@@ -37,8 +37,8 @@ const getClusteredCustomerLocationsOld = async (
       geoCoordinates: item.mainGeoCoordinates,
     }));
 
-    console.log("cust:",customers);
-    
+    console.log("cust:", customers);
+
 
     const allClusters = await Cluster.find({}).lean();
 
@@ -192,7 +192,7 @@ const getClusteredCustomerLocationsOld = async (
   }
 };
 
-const getClusteredCustomerLocations = async (maxCustomersPerCluster, maxCartridgesPerCluster) => {
+const getClusteredCustomerLocationsO = async (maxCustomersPerCluster, maxCartridgesPerCluster) => {
   try {
     const { data: customersRaw } = await getGeoLocations();
 
@@ -376,6 +376,202 @@ const getClusteredCustomerLocations = async (maxCustomersPerCluster, maxCartridg
   }
 };
 
+const getClusteredCustomerLocations = async (maxCustomersPerCluster, maxCartridgesPerCluster) => {
+  try {
+    const { data: customersRaw } = await getGeoLocations();
+
+    const customers = customersRaw.map((item) => ({
+      _id: item.customer.id,
+      display_name: item.customer.name,
+      contact_number: item.customer.contact_number,
+      cf_cartridge_qty: item.customer.cf_cartridge_qty,
+      geoCoordinates: item.mainGeoCoordinates,
+    }));
+
+    const allClusters = await Cluster.find({}).lean();
+
+    const clusteredIds = new Set(
+      allClusters.flatMap((c) =>
+        c.customers.map((cObj) => cObj.customerId?.toString())
+      )
+    );
+
+    const existingClusterUsage = {};
+    const numClusters = 7; // Fixed clusters: 0 to 6
+
+    for (let i = 0; i < numClusters; i++) {
+      const clusterData = allClusters.find((c) => c.clusterNo === i);
+      existingClusterUsage[i] = {
+        customers: clusterData
+          ? [...clusterData.customers.map((c) => c.customerId?.toString())]
+          : [],
+        totalCartridge: clusterData ? clusterData.cartridge_qty || 0 : 0,
+      };
+    }
+
+    // const fallbackCluster = 7;
+    // const fallbackData = allClusters.find((c) => c.clusterNo === fallbackCluster);
+    // existingClusterUsage[fallbackCluster] = {
+    //   customers: fallbackData
+    //     ? [...fallbackData.customers.map((c) => c.customerId?.toString())]
+    //     : [],
+    //   totalCartridge: fallbackData ? fallbackData.cartridge_qty || 0 : 0,
+    // };
+
+    const newCustomers = customers.filter(
+      (cust) =>
+        cust.geoCoordinates &&
+        Array.isArray(cust.geoCoordinates.coordinates) &&
+        cust.geoCoordinates.coordinates.length === 2 &&
+        !clusteredIds.has(cust._id.toString())
+    );
+
+    if (newCustomers.length === 0) {
+      throw new Error("No new customers found");
+    }
+
+    const coordinates = newCustomers.map((c) => c.geoCoordinates.coordinates);
+
+    // Ensure 7 centroids for clusters 0 to 6
+    let centroids = [];
+    if (coordinates.length >= 7) {
+      centroids = coordinates.slice(0, 7);
+    } else {
+      for (let i = 0; i < 7; i++) {
+        const coord = coordinates[i % coordinates.length];
+        centroids.push([coord[0] + i * 0.001, coord[1] + i * 0.001]);
+      }
+    }
+
+    let assignments = new Array(coordinates.length).fill(-1);
+    let changed = true;
+    let iterations = 0;
+    const MAX_ITER = 100;
+
+    while (changed && iterations < MAX_ITER) {
+      changed = false;
+      iterations++;
+
+      for (let i = 0; i < coordinates.length; i++) {
+        const distances = centroids.map((c) => distance(coordinates[i], c));
+        const nearestCentroid = distances.indexOf(Math.min(...distances));
+        if (assignments[i] !== nearestCentroid) {
+          assignments[i] = nearestCentroid;
+          changed = true;
+        }
+      }
+
+      const newCentroids = new Array(7).fill(0).map(() => [0, 0]);
+      const counts = new Array(7).fill(0);
+
+      for (let i = 0; i < coordinates.length; i++) {
+        const cluster = assignments[i];
+        newCentroids[cluster][0] += coordinates[i][0];
+        newCentroids[cluster][1] += coordinates[i][1];
+        counts[cluster]++;
+      }
+
+      for (let j = 0; j < 7; j++) {
+        if (counts[j] > 0) {
+          newCentroids[j][0] /= counts[j];
+          newCentroids[j][1] /= counts[j];
+        }
+      }
+
+      centroids = newCentroids;
+    }
+
+    const assignedCustomers = [];
+
+    for (let i = 0; i < newCustomers.length; i++) {
+      const cust = newCustomers[i];
+      const coord = coordinates[i];
+      const cartridge = parseFloat(cust.cf_cartridge_qty) || 0;
+
+      const sortedClusters = centroids
+        .map((c, idx) => ({
+          cluster: idx,
+          dist: distance(coord, c),
+        }))
+        .filter(({ cluster }) => cluster >= 0 && cluster <= 6)
+        .sort((a, b) => a.dist - b.dist);
+
+      let assigned = false;
+
+      for (const { cluster } of sortedClusters) {
+        const usage = existingClusterUsage[cluster];
+
+        const canAddCustomer =
+          usage.customers.length < maxCustomersPerCluster &&
+          usage.totalCartridge + cartridge <= maxCartridgesPerCluster;
+
+        if (canAddCustomer) {
+          usage.customers.push(cust._id.toString());
+          usage.totalCartridge += cartridge;
+          assignedCustomers.push({ ...cust, cluster });
+          assigned = true;
+          break;
+        }
+      }
+
+      // if (!assigned) {
+      //   const usage = existingClusterUsage[fallbackCluster];
+      //   usage.customers.push(cust._id.toString());
+      //   usage.totalCartridge += cartridge;
+      //   assignedCustomers.push({ ...cust, cluster: fallbackCluster });
+      // }
+
+      if (!assigned) {
+        console.warn(`Customer ${cust._id} could not be assigned to any cluster`);
+      }
+
+    }
+
+    // Write to DB
+for (let clusterNo = 0; clusterNo < 7; clusterNo++) {
+      const usage = existingClusterUsage[clusterNo];
+
+      const formattedCustomers = usage.customers.map((id, index) => ({
+        customerId: new mongoose.Types.ObjectId(id),
+        sequenceNo: index + 1,
+      }));
+
+      const clusterCustomerData = usage.customers.map(id =>
+        customers.find(c => c._id.toString() === id)
+      );
+
+      const totalCartridge = clusterCustomerData.reduce((sum, c) => {
+        return sum + (parseFloat(c?.cf_cartridge_qty) || 0);
+      }, 0);
+
+      const existing = await Cluster.findOne({ clusterNo });
+
+      if (existing) {
+        await Cluster.updateOne(
+          { clusterNo },
+          {
+            $set: {
+              customers: formattedCustomers,
+              cartridge_qty: totalCartridge,
+            },
+          }
+        );
+      } else {
+        await Cluster.create({
+          clusterNo,
+          customers: formattedCustomers,
+          cartridge_qty: totalCartridge,
+        });
+      }
+    }
+
+    return assignedCustomers;
+  } catch (error) {
+    console.error("Clustering Error:", error);
+    throw new Error(error.message);
+  }
+};
+
 const getAllClustersOld = async () => {
   try {
     const clusters = await Cluster.find()
@@ -402,25 +598,27 @@ const getAllClustersOld = async () => {
         }
       }
     }
-    
+
     return clusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
   }
 };
 
-const getAllClusters = async (customer_code) => {
+const getAllClusters_old = async (customer_code) => {
   try {
     const clusters = await Cluster.find()
       .populate("customers.customerId")
       .lean();
 
-      const filteredClusters = [];
-
+    const filteredClusters = [];
 
     for (const cluster of clusters) {
       const filteredCustomers = [];
+      const cartridgeSizeCounts = {};
       for (const cust of cluster.customers) {
+        // console.log("cart:",cust);
+
         // if (cust.customerId) {
         //   const customerData = cust.customerId;
         //   cust.customerId = customerData._id;
@@ -443,6 +641,7 @@ const getAllClusters = async (customer_code) => {
             cust.name = customerData.display_name || customerData.name;
             cust.contact_number = contactNumber;
             cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
+            cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
             const geo = await GeoLocation.findOne({
               customerId: customerData._id,
@@ -450,15 +649,96 @@ const getAllClusters = async (customer_code) => {
 
             cust.geoCoordinates = geo?.MaingeoCoordinates;
 
+            const size = customerData.cf_cartridge_size || "Unknown";
+            cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
             filteredCustomers.push(cust);
           }
         }
       }
-
-        cluster.customers = filteredCustomers;
-        filteredClusters.push(cluster);
+      cluster.customers = filteredCustomers;
+      cluster.cartridgeSizeCounts = cartridgeSizeCounts;
+      filteredClusters.push(cluster);
     }
 
+    return filteredClusters;
+  } catch (error) {
+    throw new Error("Failed to fetch clusters: " + error.message);
+  }
+};
+
+const getAllClusters = async (customer_code) => {
+  try {
+    // Step 1: Fetch all clusters and populate customer data
+    const clusters = await Cluster.find()
+      .populate("customers.customerId")
+      .lean();
+
+    const filteredClusters = [];
+    const allCustomerIds = [];
+
+    // Step 2: Collect all customer IDs for GeoLocation lookup
+    for (const cluster of clusters) {
+      for (const cust of cluster.customers) {
+        if (cust.customerId) {
+          allCustomerIds.push(cust.customerId._id.toString());
+        }
+      }
+    }
+
+    // Step 3: Bulk fetch GeoLocations
+    const geoData = await GeoLocation.find({
+      customerId: { $in: allCustomerIds },
+    }).lean();
+
+    const geoMap = new Map();
+    for (const geo of geoData) {
+      geoMap.set(geo.customerId.toString(), geo.MaingeoCoordinates);
+    }
+
+    // Step 4: Process each cluster
+    for (const cluster of clusters) {
+      const filteredCustomers = [];
+      const cartridgeSizeCounts = {};
+
+      for (const cust of cluster.customers) {
+        if (!cust.customerId) continue;
+
+        const customerData = cust.customerId;
+        const contactNumber = customerData.contact_number;
+
+        if (!customer_code || contactNumber === customer_code) {
+          cust.customerId = customerData._id;
+          cust.name = customerData.display_name || customerData.name;
+          cust.contact_number = contactNumber;
+          cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
+          cust.cf_cartridge_size = customerData.cf_cartridge_size;
+
+          const geo = geoMap.get(customerData._id.toString());
+          cust.geoCoordinates = geo || null;
+
+          const size = customerData.cf_cartridge_size || "Unknown";
+          cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+          filteredCustomers.push(cust);
+        }
+      }
+
+      filteredCustomers.sort((a, b) => {
+        const aIndex = a.indexNo ?? Infinity;
+        const bIndex = b.indexNo ?? Infinity;
+        return aIndex - bIndex;
+      });
+
+      cluster.cartridge_qty = filteredCustomers.reduce((sum, cust) => {
+    return sum + (parseInt(cust.cf_cartridge_qty) || 0);
+  }, 0);
+
+      // Add filtered data to cluster
+      cluster.customers = filteredCustomers;
+      cluster.cartridgeSizeCounts = cartridgeSizeCounts;
+
+      filteredClusters.push(cluster);
+    }
     return filteredClusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
@@ -559,9 +839,11 @@ const reassignMultipleCustomersToClustersOld = async (reassignments) => {
   }
 };
 
-const reassignMultipleCustomersToClusters = async (reassignments) => {
+const reassignMultipleCustomersToClusters_old = async (reassignments) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
+  const skippedCustomers = [];
 
   try {
     const MAX_CUSTOMERS = 20;
@@ -571,19 +853,6 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     const customerIds = reassignments.map((r) => r.customerId);
     const customers = await Customer.find({ _id: { $in: customerIds } }).session(session).lean();
     const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
-
-    // 1. Remove from all clusters
-    await Cluster.updateMany(
-      { "customers.customerId": { $in: customerIds.map(id => new mongoose.Types.ObjectId(id)) } },
-      {
-        $pull: {
-          customers: {
-            customerId: { $in: customerIds.map(id => new mongoose.Types.ObjectId(id)) }
-          }
-        }
-      },
-      { session }
-    );
 
     // 2. Recalculate cartridge_qty for all clusters after removal
     const allClusters = await Cluster.find().session(session);
@@ -598,9 +867,38 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     }
 
     // 3. Assign each customer individually
-    for (const { customerId, newClusterNo } of reassignments) {
+    for (const { customerId, newClusterNo, indexNo } of reassignments) {
       const customer = customerMap.get(customerId);
-      const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
+
+      if (!customer) {
+        skippedCustomers.push(`Unknown customer ID: ${customerId}`);
+        continue;
+      }
+
+      // ✅ Check GeoLocation & MaingeoCoordinates
+      const geoData = await GeoLocation.findOne({ customerId }).lean();
+      const hasValidGeo =
+        geoData &&
+        geoData.MaingeoCoordinates &&
+        Array.isArray(geoData.MaingeoCoordinates.coordinates) &&
+        geoData.MaingeoCoordinates.coordinates.length === 2;
+
+      if (!hasValidGeo) {
+        skippedCustomers.push(customer.display_name || `Customer ID ${customerId}`);
+        continue; // Don't remove or reassign
+      }
+
+      await Cluster.updateMany(
+        { "customers.customerId": new mongoose.Types.ObjectId(customerId) },
+        {
+          $pull: {
+            customers: { customerId: new mongoose.Types.ObjectId(customerId) },
+          },
+        },
+        { session }
+      );
+
+       const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
 
       let cluster = await Cluster.findOne({ clusterNo: newClusterNo }).session(session);
       let assigned = true;
@@ -632,9 +930,12 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
         }
       }
 
+      const insertAt = Math.min(indexNo ?? 0, cluster.customers.length);
+
       const sequenceNo = (cluster.customers?.length || 0) + 1;
       const newCustomerObj = {
         customerId: new mongoose.Types.ObjectId(customerId),
+        indexNo: insertAt,
         sequenceNo,
       };
 
@@ -645,8 +946,14 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       console.log(`Assigned to cluster ${newClusterNo}: ${assigned}`);
     }
 
+    console.log("skip:", skippedCustomers);
+
+
     await session.commitTransaction();
     session.endSession();
+
+    return { skippedCustomers };
+
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -654,13 +961,163 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
   }
 };
 
+const reassignMultipleCustomersToClusters = async (reassignments) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const skippedCustomers = [];
+  const affectedClusterIds = new Set(); 
+
+  try {
+    const MAX_CUSTOMERS = 20;
+    const MAX_CARTRIDGES = 24;
+    const FALLBACK_CLUSTER_NO = 7;
+
+    const customerIds = reassignments.map((r) => r.customerId);
+    const customers = await Customer.find({ _id: { $in: customerIds } }).session(session).lean();
+    const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+
+    // // 1. Load all clusters initially
+    // const allClusters = await Cluster.find().session(session);
+
+    // // 2. Recalculate cartridge_qty for all clusters (based on actual data)
+    // for (const cluster of allClusters) {
+    //   const updatedCustomerIds = cluster.customers.map((c) => c.customerId.toString());
+    //   const updatedQty = updatedCustomerIds.reduce((sum, id) => {
+    //     const c = customerMap.get(id);
+    //     return sum + (parseFloat(c?.cf_cartridge_qty) || 0);
+    //   }, 0);
+    //   cluster.cartridge_qty = updatedQty;
+    //   await cluster.save({ session });
+    // }
+
+    // 3. Assign each customer individually
+    for (const { customerId, newClusterNo, indexNo } of reassignments) {
+      const customer = customerMap.get(customerId);
+
+      if (!customer) {
+        skippedCustomers.push(`Unknown customer ID: ${customerId}`);
+        continue;
+      }
+
+      // // ✅ Check GeoLocation & MaingeoCoordinates
+      // const geoData = await GeoLocation.findOne({ customerId }).lean();
+      // const hasValidGeo =
+      //   geoData &&
+      //   geoData.MaingeoCoordinates &&
+      //   Array.isArray(geoData.MaingeoCoordinates.coordinates) &&
+      //   geoData.MaingeoCoordinates.coordinates.length === 2;
+
+      // if (!hasValidGeo) {
+      //   skippedCustomers.push(customer.display_name || `Customer ID ${customerId}`);
+      //   continue; // Don't remove or reassign
+      // }
+
+      const originalClusters = await Cluster.find({ "customers.customerId": new mongoose.Types.ObjectId(customerId) }).session(session);
+      for (const cluster of originalClusters) {
+        affectedClusterIds.add(cluster._id.toString()); // Mark old cluster for recalculation
+      }
+
+
+      // ✅ Only remove if customer is valid and will be reassigned
+      await Cluster.updateMany(
+        { "customers.customerId": new mongoose.Types.ObjectId(customerId) },
+        {
+          $pull: {
+            customers: { customerId: new mongoose.Types.ObjectId(customerId) },
+          },
+        },
+        { session }
+      );
+
+      const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
+
+      let cluster = await Cluster.findOne({ clusterNo: newClusterNo }).session(session);
+      let assigned = true;
+
+      const currentCustomerCount = cluster?.customers.length || 0;
+      const currentCartridgeQty = cluster?.cartridge_qty || 0;
+
+      if (
+        currentCustomerCount + 1 > MAX_CUSTOMERS ||
+        currentCartridgeQty + cartridgeQty > MAX_CARTRIDGES
+      ) {
+        assigned = false;
+
+        // 🔄 Fallback cluster logic
+        cluster = await Cluster.findOne({ clusterNo: FALLBACK_CLUSTER_NO }).session(session);
+        if (!cluster) {
+          cluster = await Cluster.create(
+            [
+              {
+                clusterNo: FALLBACK_CLUSTER_NO,
+                clusterName: "Unassigned",
+                customers: [],
+                cartridge_qty: 0,
+              },
+            ],
+            { session }
+          );
+          cluster = Array.isArray(cluster) ? cluster[0] : cluster;
+        }
+      }
+
+      // ✅ Final add to cluster
+      const insertAt = Math.min(indexNo ?? 0, cluster.customers.length);
+      const sequenceNo = (cluster.customers?.length || 0) + 1;
+
+      const newCustomerObj = {
+        customerId: new mongoose.Types.ObjectId(customerId),
+        indexNo: insertAt,
+        sequenceNo,
+      };
+
+      cluster.customers.push(newCustomerObj);
+      affectedClusterIds.add(cluster._id.toString());
+
+      await cluster.save({ session });
+
+      console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
+    }
+
+    for (const clusterId of affectedClusterIds) {
+      const cluster = await Cluster.findById(clusterId).session(session);
+      if (!cluster) continue;
+
+      const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+      const customersInCluster = await Customer.find({
+        _id: { $in: customerIdsInCluster },
+      }).session(session).lean();
+
+      cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
+        const qty = parseFloat(c?.cf_cartridge_qty);
+        return sum + (isNaN(qty) ? 0 : qty);
+      }, 0);
+
+      await cluster.save({ session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    console.log("Skipped customers:", skippedCustomers);
+    return { skippedCustomers };
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new Error("Reassignment failed: " + err.message);
+  }
+};
+
+
 // google api
 const GOOGLE_API_KEY = process.env.GOOGLE_KEY;
 console.log("GOOGLE_API_KEY:", GOOGLE_API_KEY);
 
 async function getOptimizedRouteFromGoogle(warehouse, customers) {
   console.log("customers:", customers);
-  
+
   const waypoints = customers
     .map((c) => `${c.coord.lat},${c.coord.lng}`)
     .join("|");
@@ -669,7 +1126,7 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
 
   const response = await axios.get(url);
   console.log("response:", response);
-  
+
   const data = response.data;
   console.log("Google Directions API response:", data);
 
@@ -681,7 +1138,7 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   const route = order.map((i) => customers[i]);
 
   return {
-    route,
+    route:customers,
     googleRouteData: data.routes[0],
   };
 }
@@ -695,16 +1152,19 @@ const fetchOptimizedRoutes = async (clusterNo) => {
   const results = [];
 
   for (const cluster of clusters) {
-    const customers = cluster.customers
+    let  customers = cluster.customers
       .filter((c) => c.geoCoordinates && Array.isArray(c.geoCoordinates.coordinates))
       .map((c) => ({
         customerId: c.customerId?._id?.toString?.() || c.customerId.toString?.(),
         name: c.name,
+        indexNo: c.indexNo, 
         coord: {
           lat: c.geoCoordinates.coordinates[1],
           lng: c.geoCoordinates.coordinates[0],
         },
       }));
+
+      customers = customers.sort((a, b) => a.indexNo - b.indexNo);
 
     const { route: optimizedRoute, googleRouteData } = await getOptimizedRouteFromGoogle(warehouseLocation, customers);
 
