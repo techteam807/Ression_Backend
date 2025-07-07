@@ -48,8 +48,8 @@ const storeCustomers = async (req, res) => {
 
 const getCustomers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10 , isSubscription} = req.query;
-    const result = await getAllcustomers(search, page, limit, isSubscription);
+    const { search, page = 1, limit = 10 , isSubscription, Day } = req.query;
+    const result = await getAllcustomers(search, page, limit, isSubscription, Day);
     const { customers, ...pagination } = result;
     return successResponse(
       res,
@@ -102,13 +102,18 @@ const ManageCustomerAndProductsone = async(req, res) => {
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes, userId,geoCoordinates,url,score } = req.body;
+    const { customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
     }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url, score);
+    // if(!assignmentId)
+    // {
+    //   return errorResponse(res, "AssignmentId Not Provided", 400, null);
+    // }
+
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url, score, assignmentId);
 
         // if (result.success) {
     //   return successResponse(res, result.message, null, null);

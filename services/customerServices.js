@@ -1,6 +1,7 @@
 const { ProductEnum } = require("../config/global.js");
 const axios = require("axios");
 const Customer = require("../models/customerModel");
+const cluster_Assignment = require("../models/ClusterAssignmentModel.js");
 const Cluster = require("../models/clusterModel.js");
 const User = require('../models/userModel.js');
 const Product = require("../models/productModel");
@@ -14,6 +15,7 @@ const MissedCartidge = require('../models/missedCartidgeModel.js');
 const kmeans = require('ml-kmeans').default;
 const { sendMissedCatridgeMsg, sendWhatsAppMsg, sendFirstTimeMsg } = require('../services/whatsappMsgServices.js');
 const { default: mongoose } = require("mongoose");
+const { addCustomerToAssignment } = require("./clusterAssignmentService.js");
 
 const ZOHO_API_URL = "https://www.zohoapis.in/subscriptions/v1/customers";
 const ZOHO_API_URL_SUB = "https://www.zohoapis.in/billing/v1/subscriptions";
@@ -81,7 +83,7 @@ const fetchAndStoreCustomersWithRefreshOld = async (accessToken) => {
   }
 };
 
-const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
+const fetchAndStoreCustomersWithRefreshO = async (accessToken) => {
   try {
     const response = await axios.get(ZOHO_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -220,6 +222,174 @@ const isSubscriptionNow = subscribedCustomerIds.includes(zohoCustomer.customer_i
   }
 };
 
+const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
+  try {
+    const response = await axios.get(ZOHO_API_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const subscriptionsResponse  = await axios.get(ZOHO_API_URL_SUB,{
+      headers: { Authorization: `Bearer ${accessToken}`},
+    });
+
+    const subscriptions = subscriptionsResponse.data.subscriptions || [];
+
+     const subscribedCustomerIds = subscriptions.map(sub => sub.customer_id);
+
+    const subscriptionStatuses = subscriptions.map(sub => ({
+      customer_id: sub.customer_id,
+      status: sub.status
+    }));
+    
+
+    if (!response.data || !response.data.customers) {
+      throw new Error("Invalid response from Zoho API");
+    }
+
+    const zohoCustomers = response.data.customers;
+    const zohoCustomerIds = zohoCustomers.map((c) => c.customer_id);
+
+    const existingCustomers = await Customer.find(
+      { customer_id: { $in: zohoCustomerIds } }
+    );
+
+    const existingCustomerMap = new Map(
+      existingCustomers.map((c) => [c.customer_id, c.toObject()])
+    );
+
+    const newCustomers = [];
+    const updates = [];
+
+    const fieldsToCompare = [
+      "display_name",
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "mobile",
+      "contact_number",
+      "customer_name",
+      "cf_cartridge_qty",
+      "cf_google_map_link"
+    ];
+
+
+    for (const zohoCustomer of zohoCustomers) {
+      const existing = existingCustomerMap.get(zohoCustomer.customer_id);
+      const isSubscriptionNow = subscribedCustomerIds.includes(zohoCustomer.customer_id);
+
+      if (!existing) {
+
+        // if (zohoCustomer.cf_google_map_link) {
+        //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+        //   if (coords) {
+        //     zohoCustomer.geoCoordinates = {
+        //       type: 'Point',
+        //       coordinates: [coords.lng, coords.lat]
+        //     };
+        //   }
+        // }
+        // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
+        const newCustomer = new Customer({
+          ...zohoCustomer,
+          geoCoordinates: zohoCustomer.geoCoordinates || undefined,
+          isSubscription: isSubscriptionNow,
+        });
+        newCustomers.push(newCustomer);
+      } else {
+        let hasChanges = false;
+
+        for (const field of fieldsToCompare) {
+          const newValue = zohoCustomer[field] ?? null;
+          const oldValue = existing[field] ?? null;
+
+          if (newValue !== oldValue) {
+            hasChanges = true;
+            break;
+          }
+        }
+        if (existing.isSubscription !== isSubscriptionNow) {
+          hasChanges = true;
+        }
+        if (hasChanges) {
+          // if (zohoCustomer.cf_google_map_link) {
+          //   const coords = await getCoordinatesFromShortLink(zohoCustomer.cf_google_map_link);
+          //   if (coords) {
+          //     zohoCustomer.geoCoordinates = {
+          //       type: 'Point',
+          //       coordinates: [coords.lng, coords.lat]
+          //     };
+          //   }
+          // }
+
+          // // console.log("GeoCoordinates to insert (new):", zohoCustomer.geoCoordinates);
+          // console.log("GeoCoordinates to insert:", zohoCustomer.geoCoordinates); 
+
+          updates.push({
+            updateOne: {
+              filter: { customer_id: zohoCustomer.customer_id },
+              update: {
+                $set:
+                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined, isSubscription: isSubscriptionNow },
+              }
+            },
+          });
+        }
+      }
+    }
+
+    let inserted = [];
+
+    if (newCustomers.length > 0) {
+      inserted = await Customer.insertMany(newCustomers);
+
+      const fallbackCluster = 7;
+      const fallback = await Cluster.findOne({clusterNo : fallbackCluster});
+
+      const insertedCustomerRefs = inserted.map((cust, idx) => ({
+        customerId: cust._id,
+          sequenceNo: (fallback?.customers?.length || 0) + idx + 1,
+    }));
+
+    const totalCartridgeQty = inserted.reduce((sum, c) => {
+        const qty = parseFloat(c.cf_cartridge_qty) || 0;
+        return sum + qty;
+      }, fallback?.cartridge_qty || 0);
+
+      if (fallback) {
+        await Cluster.updateOne(
+          { clusterNo: fallbackCluster },
+          {
+            $push: { customers: { $each: insertedCustomerRefs } },
+            $set: { cartridge_qty: totalCartridgeQty },
+          }
+        );
+      } else {
+        await Cluster.create({
+          clusterNo: fallbackCluster,
+          customers: insertedCustomerRefs,
+          cartridge_qty: totalCartridgeQty,
+        });
+      }
+  }
+
+    if (updates.length > 0) {
+      await Customer.bulkWrite(updates);
+    }
+
+    return {
+      message: "Sync complete",
+      added: newCustomers.length,
+      updated: updates.length,
+      // subscriptionStatuses,
+    };
+  } catch (error) {
+    console.error("Error in fetchAndStoreCustomers:", error.message);
+    throw error;
+  }
+};
+
 //store with token
 const fetchAndStoreCustomers = async (accessToken) => {
   try {
@@ -261,7 +431,10 @@ const fetchAndStoreCustomers = async (accessToken) => {
   }
 };
 
-const getAllcustomers = async (search, page, limit, isSubscription) => {
+const getAllcustomers = async (search, page, limit, isSubscription, Day) => {
+  console.log(search)
+  console.log(Day);
+  
   let filter = search
     ? {
       $or: [
@@ -281,6 +454,11 @@ const getAllcustomers = async (search, page, limit, isSubscription) => {
     filter.isSubscription = true;
   } else if (isSubscription === "false") {
     filter.isSubscription = false;
+  }
+
+  if(Day)
+  {
+    filter.cf_replacement_day = Day;
   }
 
 
@@ -448,7 +626,8 @@ const manageCustomerAndProductOne = async (customer_code, product_code) => {
   }
 };
 
-const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, geoCoordinates, url, score) => {
+const manageCustomerAndProducto = async (customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId) => {
+  
   let messages = [];
   let success = false;
   let errorMessages = [];
@@ -599,8 +778,15 @@ const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, ge
     await Report.createReports(generateReports);
   };
 
-  if (Array.isArray(customerEXHAUSTEDId) && customerEXHAUSTEDId.length === 0) {
+  if(assignmentId)
+  {
+    await addCustomerToAssignment(assignmentId, CustomerId);
+  }
+
+  if (!Customers.isNew) {
     await sendFirstTimeMsg(customerMobileNumber, customerName);
+    Customers.isNew = true;
+    await Customers.save();
   }
   else {
     await sendWhatsAppMsg(customerMobileNumber, customerName);
@@ -624,6 +810,220 @@ return {
   Customer: Customers,
 };
 };
+
+const manageCustomerAndProduct = async (customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId) => {
+  
+   const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+  let messages = [];
+  let success = false;
+  let errorMessages = [];
+
+  const Customers = await Customer.findOne({ contact_number: customer_code });
+  const ProductS = await ProductService.getMultipleProductByCode(Product_Codes);
+  const Users = await User.findById(userId);
+  // const clusterAssignment = await cluster_Assignment.findById(assignmentId);
+
+
+  if (!Customers) {
+    errorMessages.push(`Customer not found with code: ${customer_code}`);
+  }
+
+  if (!Users) {
+    errorMessages.push(`User not found with id:${userId}`);
+  }
+
+  // if(!clusterAssignment)
+  // {
+  //   errorMessages.push(`clusterAssignment not found with id:${assignmentId}`);
+  // }
+
+  if (errorMessages.length > 0) {
+    await session.abortTransaction();
+    session.endSession();
+    return {
+      success: false,
+      errorMessage: { errorMessages },
+    };
+  }
+
+  const customerEXHAUSTEDId = Customers.products;
+  console.log(customerEXHAUSTEDId)
+  const rawMobile = Customers.mobile;
+  const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
+  const customerName = Customers.display_name;
+  // Validate Products
+  const foundProductCodes = ProductS.map((p) => p.productCode);
+  const missingProductCodes = Product_Codes.filter(
+    (code) => !foundProductCodes.includes(code)
+  );
+
+  if (missingProductCodes.length > 0) {
+    messages.push(
+      `Product Not Found With Code : ${missingProductCodes.join(", ")}`
+    );
+  }
+
+  const DeletedProducts = [];
+  const InUseProducts = [];
+  const ExhaustedProducts = [];
+  const NewProducts = [];
+
+  ProductS.forEach((product) => {
+    if (product.isActive) {
+      if (product.productStatus === ProductEnum.EXHAUSTED) {
+        ExhaustedProducts.push(product);
+      } else if (product.productStatus === ProductEnum.IN_USE) {
+        InUseProducts.push(product);
+      } else if (product.productStatus === ProductEnum.NEW) {
+        NewProducts.push(product);
+      }
+    } else {
+      DeletedProducts.push(product);
+    }
+  });
+
+  // Extract product codes
+  const ExhaustedProductCodes = ExhaustedProducts.map((p) => p.productCode);
+  const NewProductCodes = NewProducts.map((p) => p.productCode);
+  const InUseProductCodes = InUseProducts.map((p) => p.productCode);
+  const DeletedProductCodes = DeletedProducts.map((p) => p.productCode);
+  const NotFoundProductCodes = missingProductCodes;
+
+  if (ExhaustedProducts.length > 0) {
+    messages.push(
+      `Product Status Found Exhausted With Codes: ${ExhaustedProductCodes.join(
+        ", "
+      )}`
+    );
+  }
+  if (InUseProducts.length > 0) {
+    messages.push(
+      `Product Status Found In Use With Codes : ${InUseProductCodes.join(", ")}`
+    );
+  }
+  if (DeletedProductCodes.length > 0) {
+    messages.push(`Product Not Active With Codes : ${DeletedProductCodes.join(", ")}`);
+  }
+
+  const ProductIds = ProductS.map((p) => p.id);
+  console.log("p:", ProductIds)
+
+  const CustomerId = Customers.id;
+  console.log("c", CustomerId);
+
+  if (
+    NewProducts.length > 0 &&
+    ExhaustedProductCodes.length === 0 &&
+    InUseProductCodes.length === 0 &&
+    DeletedProductCodes.length === 0 &&
+    NotFoundProductCodes.length === 0
+  ) {
+    // Remove existing products from customer and update their status
+    if (Customers.products.length > 0) {
+      await Product.updateMany(
+        { _id: { $in: Customers.products } },
+        {
+          $set: { productStatus: ProductEnum.EXHAUSTED },
+        },
+        { session }
+      );
+      Customers.products = [];
+      await Customers.save({ session });
+
+      const genrateLogForEXHAUSTED = {
+        customerId: CustomerId,
+        products: customerEXHAUSTEDId,
+        userId: userId,
+        status: ProductEnum.EXHAUSTED,
+      }
+
+      await Log.createLog(genrateLogForEXHAUSTED,session)
+    }
+
+    // Attach new products and update their status
+    Customers.products = NewProducts.map((p) => p._id);
+    await Customers.save({ session });
+
+    await Product.updateMany(
+      { productCode: { $in: NewProductCodes } },
+      {
+        $set: {
+          productStatus: ProductEnum.IN_USE,
+        }
+      },
+      { session }
+    );
+
+    const genrateLogForIN_USE = {
+      customerId: CustomerId,
+      products: NewProducts.map((p) => p.id),
+      userId: userId,
+      status: ProductEnum.IN_USE,
+    };
+
+    await geoLocation.storeGeoLocation(CustomerId, geoCoordinates, session);
+    await Log.createLog(genrateLogForIN_USE,session);
+
+    if (score) {
+      const generateReports = {
+        customerId: CustomerId,
+        waterScore: score,
+        date: new Date() 
+      };
+    await Report.createReports(generateReports,session);
+  };
+
+  if(assignmentId)
+  {
+    await addCustomerToAssignment(assignmentId, CustomerId,session);
+  }
+
+  if (!Customers.installation) {
+    await sendFirstTimeMsg(customerMobileNumber, customerName);
+    Customers.installation = true;
+    await Customers.save({ session });
+  }
+  else {
+    await sendWhatsAppMsg(customerMobileNumber, customerName);
+  }
+
+  messages.push(
+    `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
+  );
+  success = true;
+}
+
+  await session.commitTransaction();
+    session.endSession();
+
+return {
+  success,
+  message: messages,
+  ProductCodes: {
+    notFound: NotFoundProductCodes.join(", "),
+    exhausted: ExhaustedProductCodes.join(", "),
+    inUse: InUseProductCodes.join(", "),
+    deleted: DeletedProductCodes.join(", "),
+  },
+  Customer: Customers,
+};
+
+  }
+  catch (error)
+  {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Transaction failed:", error);
+    return {
+      success: false,
+      errorMessage: { error: error.message },
+    };
+  }
+};
+
 
 const getCustomerDropdown = async (filter) => {
   try {
