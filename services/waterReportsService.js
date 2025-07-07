@@ -28,7 +28,7 @@ const createReports = async (reportsData, session = null) => {
 };
 
 
-const getReports = async (year, month, filter = {}) => {
+const getReportsold = async (year, month, filter = {}) => {
   if (year && month) {
     filter.$expr = {
       $and: [
@@ -45,7 +45,7 @@ const getReports = async (year, month, filter = {}) => {
   return await Reports.find(filter).populate('customerId', 'display_name');
 };
 
-const getReportsnew = async (year, month, filter = {}) => {
+const getReports= async (year, month, startDate, endDate, filter = {}) => {
   const reportFilter = {};
 
   if (year && month) {
@@ -59,6 +59,16 @@ const getReportsnew = async (year, month, filter = {}) => {
     reportFilter.$expr = { $eq: [{ $year: "$date" }, year] };
   } else if (month) {
     reportFilter.$expr = { $eq: [{ $month: "$date" }, month] };
+  }
+
+  if (startDate || endDate) {
+    reportFilter.date = {};
+    if (startDate) {
+      reportFilter.date.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      reportFilter.date.$lte = new Date(endDate);
+    }
   }
 
   // 1. Get all customers (filter on isSubscription if needed)
