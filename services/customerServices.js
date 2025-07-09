@@ -270,7 +270,8 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       "contact_number",
       "customer_name",
       "cf_cartridge_qty",
-      "cf_google_map_link"
+      "cf_google_map_link",
+      "cf_singlelineaddress",
     ];
 
 
@@ -295,6 +296,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
           ...zohoCustomer,
           geoCoordinates: zohoCustomer.geoCoordinates || undefined,
           isSubscription: isSubscriptionNow,
+          cf_detailed_address: zohoCustomer.cf_singlelineaddress || "", 
         });
         newCustomers.push(newCustomer);
       } else {
@@ -331,7 +333,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
               filter: { customer_id: zohoCustomer.customer_id },
               update: {
                 $set:
-                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined, isSubscription: isSubscriptionNow },
+                  { ...zohoCustomer, geoCoordinates: zohoCustomer.geoCoordinates || undefined, isSubscription: isSubscriptionNow, cf_detailed_address: zohoCustomer.cf_singlelineaddress || "",  },
               }
             },
           });

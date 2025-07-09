@@ -2,6 +2,39 @@ const ClusterAssignment = require('../models/ClusterAssignmentModel');
 const Cluster = require('../models/clusterModel');
 const { ReplacementStatusEnum } = require('../config/global');
 
+function getWeek() {
+  const now = new Date();
+
+  // Convert current time to IST
+  const indiaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+
+  // Start of today in IST
+  const start = new Date(indiaTime);
+  start.setHours(0, 0, 0, 0);
+
+  // End of 6 days later (7-day range)
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  // Format to YYYY-MM-DD in IST
+  const formatDate = (date) => {
+    const istDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const year = istDate.getFullYear();
+    const month = String(istDate.getMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  console.log("s:",formatDate(start),"|","e:",formatDate(end));
+  
+
+  return {
+    start: formatDate(start),
+    end: formatDate(end)
+  };
+}
+
 const assignCluster = async (userId, clusterId, date) => {
     try {
 
@@ -151,13 +184,20 @@ const getAssignments = async (filters = {}) => {
                     });
 
                     const cartridgeSizeCounts = {};
-    for (const customer of assignment.clusterId.customers) {
-        console.log("cust:",customer);
-        
-        const size =  customer.customerId?.cf_cartridge_size || "Unknown";
-        cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
-    }
-    assignment.cartridgeSizeCounts = cartridgeSizeCounts
+                    for (const customer of assignment.clusterId.customers) {
+                        console.log("cust:", customer);
+
+                        // const size = customer.customerId?.cf_cartridge_size || "Unknown";
+                        // cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+                        const size =
+                          customer.customerId?.cf_cartridge_size || "Unknown";
+                        const qty =
+                          parseInt(customer.customerId.cf_cartridge_qty) || 0;
+                        cartridgeSizeCounts[size] =
+                          (cartridgeSizeCounts[size] || 0) + qty;
+                    }
+                    assignment.cartridgeSizeCounts = cartridgeSizeCounts
                 }
 
                 const assignmentDateIST = new Date(assignment.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -192,8 +232,8 @@ const getAllAssignments = async (filters = {}) => {
         if (filters.startDate && filters.endDate) {
             try {
                 // Convert dates to Indian timezone
-                const startDate = new Date(filters.startDate);
-                const endDate = new Date(filters.endDate);
+                startDate = new Date(filters.startDate);
+                endDate = new Date(filters.endDate);
                 const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                 const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
 
@@ -205,13 +245,23 @@ const getAllAssignments = async (filters = {}) => {
                 throw new Error('Invalid date format provided');
             }
         }
+        else {
+            const { start, end } = getWeek();
+            startDate = start;
+            endDate = end;
+
+            query.date = {
+                $gte: startDate,
+                $lte: endDate
+            };
+        }
 
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
             .populate('clusterId', 'clusterNo clusterName')
             .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
-            .sort({ date: -1  })
+            .sort({ date: -1 })
             .lean();
 
         return assignments;
