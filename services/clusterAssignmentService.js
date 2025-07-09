@@ -187,8 +187,15 @@ const getAssignments = async (filters = {}) => {
                     for (const customer of assignment.clusterId.customers) {
                         console.log("cust:", customer);
 
-                        const size = customer.customerId?.cf_cartridge_size || "Unknown";
-                        cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+                        // const size = customer.customerId?.cf_cartridge_size || "Unknown";
+                        // cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+                        const size =
+                          customer.customerId?.cf_cartridge_size || "Unknown";
+                        const qty =
+                          parseInt(customer.customerId.cf_cartridge_qty) || 0;
+                        cartridgeSizeCounts[size] =
+                          (cartridgeSizeCounts[size] || 0) + qty;
                     }
                     assignment.cartridgeSizeCounts = cartridgeSizeCounts
                 }
