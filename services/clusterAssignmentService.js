@@ -81,9 +81,13 @@ const assignCluster = async (userId, clusterId, date) => {
     }
 };
 
-const getClusterDropdown = async () => {
+const getClusterDropdown = async (vehicleNo) => {
     try {
-        const clusters = await Cluster.find({}, 'clusterNo _id clusterName')
+        const filter = {};
+        if (vehicleNo) {
+            filter.vehicleNo = Number(vehicleNo);
+        }
+        const clusters = await Cluster.find(filter, 'clusterNo _id clusterName vehicleNo')
             .sort({ clusterNo: 1 })
             .lean();
 
@@ -229,6 +233,20 @@ const getAllAssignments = async (filters = {}) => {
         if (filters.clusterId) query.clusterId = filters.clusterId;
         if (filters.userId) query.userId = filters.userId;
 
+        if (filters.vehicleNo) {
+            const matchingClusters = await Cluster.find(
+                { vehicleNo: Number(filters.vehicleNo) },
+                '_id'
+            ).lean();
+
+            const clusterIds = matchingClusters.map(c => c._id);
+
+            // If no matching clusters, return early with empty data
+            if (clusterIds.length === 0) return [];
+
+            query.clusterId = { $in: clusterIds };
+        }
+
         if (filters.startDate && filters.endDate) {
             try {
                 // Convert dates to Indian timezone
@@ -259,7 +277,7 @@ const getAllAssignments = async (filters = {}) => {
         // Get all assignments based on filters with complete population
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
-            .populate('clusterId', 'clusterNo clusterName')
+            .populate('clusterId', 'clusterNo clusterName vehicleNo')
             .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
             .sort({ date: -1 })
             .lean();
