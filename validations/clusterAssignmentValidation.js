@@ -17,6 +17,7 @@ const assignClusterValidation = Joi.object({
 
 const getAssignmentsValidation = Joi.object({
     clusterId: Joi.string().optional(),
+    vehicleNo: Joi.number().optional(),
     userId: Joi.string().optional(),
     startDate: Joi.date().optional(),
     endDate: Joi.date().min(Joi.ref('startDate')).optional().messages({

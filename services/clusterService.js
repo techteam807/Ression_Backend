@@ -1006,7 +1006,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     // }
 
     // 3. Assign each customer individually
-    for (const { customerId, newClusterNo, indexNo } of reassignments) {
+    for (const { customerId, newClusterId, indexNo } of reassignments) {
       const customer = customerMap.get(customerId);
 
       if (!customer) {
@@ -1046,7 +1046,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 
       const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
 
-      let cluster = await Cluster.findOne({ clusterNo: newClusterNo }).session(session);
+      let cluster = await Cluster.findOne({ _id: newClusterId }).session(session);
       let assigned = true;
 
       const currentCustomerCount = cluster?.customers.length || 0;
@@ -1078,7 +1078,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 
 
       if (!cluster) {
-        throw new Error(`Cluster with clusterNo ${newClusterNo} not found.`);
+        throw new Error(`Cluster with ClusterId ${newClusterId} not found.`);
       }
 
       // ✅ Final add to cluster
@@ -1096,7 +1096,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 
       await cluster.save({ session });
 
-      console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
+      console.log(`Assigned to cluster ${assigned ? newClusterId : FALLBACK_CLUSTER_NO}`);
     }
 
     for (const clusterId of affectedClusterIds) {
@@ -1162,10 +1162,14 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   };
 }
 
-const fetchOptimizedRoutes = async (clusterNo) => {
+const fetchOptimizedRoutes = async (clusterNo,vehicleNo) => {
   let clusters = await getAllClusters();
   if (clusterNo !== undefined && clusterNo !== null && !isNaN(clusterNo)) {
-    clusters = clusters.filter((cluster) => cluster.clusterNo === clusterNo);
+    clusters = clusters.filter((cluster) => cluster.clusterNo === Number(clusterNo));
+  }
+
+    if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
+    clusters = clusters.filter((cluster) => cluster.vehicleNo === Number(vehicleNo));
   }
 
   const results = [];
