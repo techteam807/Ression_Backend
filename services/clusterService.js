@@ -666,12 +666,24 @@ const getAllClusters_old = async (customer_code) => {
   }
 };
 
-const getAllClusters = async (customer_code) => {
+const getAllClusters = async (customer_code,vehicleNo) => {
   try {
+    const query = {};
+
+    if (vehicleNo) query.vehicleNo = vehicleNo;
     // Step 1: Fetch all clusters and populate customer data
-    const clusters = await Cluster.find()
+    const clusters = await Cluster.find(query)
       .populate("customers.customerId")
       .lean();
+
+      if (vehicleNo) {
+      const cluster7 = await Cluster.findOne({ clusterNo: 7 })
+        .populate("customers.customerId")
+        .lean();
+      if (cluster7) {
+        clusters.push(cluster7);
+      }
+    }
 
     const filteredClusters = [];
     const allCustomerIds = [];
