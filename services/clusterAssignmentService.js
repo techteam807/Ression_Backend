@@ -249,11 +249,18 @@ const getAllAssignments = async (filters = {}) => {
 
         if (filters.startDate && filters.endDate) {
             try {
-                // Convert dates to Indian timezone
-                startDate = new Date(filters.startDate);
-                endDate = new Date(filters.endDate);
-                const indianStartDate = new Date(startDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                const indianEndDate = new Date(endDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                const indiaTz = 'Asia/Kolkata';
+
+                const start = new Date(
+                    new Date(filters.startDate + 'T00:00:00').toLocaleString('en-US', { timeZone: indiaTz })
+                );
+                const end = new Date(
+                    new Date(filters.endDate + 'T23:59:59').toLocaleString('en-US', { timeZone: indiaTz })
+                );
+
+                // Convert back to UTC (Mongo stores in UTC)
+                const indianStartDate = new Date(start.toISOString());
+                const indianEndDate = new Date(end.toISOString());
 
                 query.date = {
                     $gte: indianStartDate,
