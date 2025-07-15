@@ -1162,10 +1162,10 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   };
 }
 
-const fetchOptimizedRoutes = async (clusterNo,vehicleNo) => {
+const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
   let clusters = await getAllClusters();
-  if (clusterNo !== undefined && clusterNo !== null && !isNaN(clusterNo)) {
-    clusters = clusters.filter((cluster) => cluster.clusterNo === Number(clusterNo));
+  if (clusterId !== undefined && clusterId !== null && !isNaN(clusterId)) {
+    clusters = clusters.filter((cluster) => cluster._id === Number(clusterId));
   }
 
     if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
