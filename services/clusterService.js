@@ -1164,9 +1164,9 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
 
 const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
   let clusters = await getAllClusters();
-  if (clusterId !== undefined && clusterId !== null && !isNaN(clusterId)) {
-    clusters = clusters.filter((cluster) => cluster._id === Number(clusterId));
-  }
+if (clusterId) {
+  clusters = clusters.filter((cluster) => cluster._id.toString() === clusterId.toString());
+}
 
     if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
     clusters = clusters.filter((cluster) => cluster.vehicleNo === Number(vehicleNo));
@@ -1253,6 +1253,7 @@ const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
     );
 
     results.push({
+      clusterId:cluster._id,
       clusterNo: cluster.clusterNo,
       cartridge_qty: newQty,
       totalDistance: totalDistance.toFixed(2),
