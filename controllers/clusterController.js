@@ -57,10 +57,10 @@ const reassignMultipleCustomers = async (req, res) => {
 
 const optimizedRoute = async (req, res) => {
   try{
-    const clusterNo= req.query.clusterNo;
+    const clusterId= req.query.clusterId;
     const vehicleNo= req.query.vehicleNo;
 
- const result = await fetchOptimizedRoutes(clusterNo,vehicleNo);
+ const result = await fetchOptimizedRoutes(clusterId,vehicleNo);
  return successResponse(res, "Customers Routes",null, result);
   }
   catch (error)
