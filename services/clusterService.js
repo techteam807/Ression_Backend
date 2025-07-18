@@ -1091,7 +1091,13 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
         sequenceNo,
       };
 
-      cluster.customers.push(newCustomerObj);
+      // cluster.customers.push(newCustomerObj);
+      if (indexNo !== undefined && indexNo >= 0 && indexNo <= cluster.customers.length) {
+  cluster.customers.splice(indexNo, 0, newCustomerObj);
+} else {
+  cluster.customers.push(newCustomerObj); // Default append
+}
+
       affectedClusterIds.add(cluster._id.toString());
 
       await cluster.save({ session });
@@ -1099,22 +1105,50 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       console.log(`Assigned to cluster ${assigned ? newClusterId : FALLBACK_CLUSTER_NO}`);
     }
 
+    // for (const clusterId of affectedClusterIds) {
+    //   const cluster = await Cluster.findById(clusterId).session(session);
+    //   if (!cluster) continue;
+
+    //   const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+    //   const customersInCluster = await Customer.find({
+    //     _id: { $in: customerIdsInCluster },
+    //   }).session(session).lean();
+
+    //   cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
+    //     const qty = parseFloat(c?.cf_cartridge_qty);
+    //     return sum + (isNaN(qty) ? 0 : qty);
+    //   }, 0);
+
+    //   await cluster.save({ session });
+    // }
+
     for (const clusterId of affectedClusterIds) {
-      const cluster = await Cluster.findById(clusterId).session(session);
-      if (!cluster) continue;
+  const cluster = await Cluster.findById(clusterId).session(session);
+  if (!cluster) continue;
 
-      const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
-      const customersInCluster = await Customer.find({
-        _id: { $in: customerIdsInCluster },
-      }).session(session).lean();
+  // ✅ Reindex all customers in the cluster
+  cluster.customers = cluster.customers.map((cust, i) => ({
+    ...cust,
+    indexNo: i,
+    sequenceNo: i + 1,
+  }));
 
-      cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
-        const qty = parseFloat(c?.cf_cartridge_qty);
-        return sum + (isNaN(qty) ? 0 : qty);
-      }, 0);
+  // ✅ Recalculate cartridge_qty
+  const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+  const customersInCluster = await Customer.find({
+    _id: { $in: customerIdsInCluster },
+  })
+    .session(session)
+    .lean();
 
-      await cluster.save({ session });
-    }
+  cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
+    const qty = parseFloat(c?.cf_cartridge_qty);
+    return sum + (isNaN(qty) ? 0 : qty);
+  }, 0);
+
+  await cluster.save({ session });
+}
+
 
     await session.commitTransaction();
     session.endSession();
