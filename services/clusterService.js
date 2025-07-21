@@ -726,7 +726,8 @@ const getAllClusters = async (customer_code,vehicleNo) => {
           cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
           const geo = geoMap.get(customerData._id.toString());
-          cust.geoCoordinates = geo || null;
+          cust.geoCoordinates = geo || {type: "Point",
+    coordinates: [Number(23.0794),Number(72.3813)]};
 
           const size = customerData.cf_cartridge_size || "Unknown";
           const qty = parseInt(customerData.cf_cartridge_qty) || 0;
@@ -817,7 +818,8 @@ const getAllClusters1 = async (customer_code, vehicleNo) => {
             contact_number: contactNumber,
             cf_cartridge_qty: customerData.cf_cartridge_qty,
             cf_cartridge_size: customerData.cf_cartridge_size,
-            geoCoordinates: geoMap.get(customerData._id.toString()) || null,
+            geoCoordinates: geoMap.get(customerData._id.toString()) || {type: "Point",
+    coordinates: ['23.0794','72.3813']}
           };
 
           // Cartridge size count
