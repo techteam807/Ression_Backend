@@ -34,6 +34,9 @@ const reassignMultipleCustomers = async (req, res) => {
   try {
     const { reassignments } = req.body;
 
+    console.log("Reassignments received:", reassignments);
+    
+
     if (!Array.isArray(reassignments)) {
       return errorResponse(res, "Reassignments array is required.", 400); 
     }
