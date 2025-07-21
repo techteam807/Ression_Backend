@@ -666,100 +666,100 @@ const getAllClusters_old = async (customer_code) => {
   }
 };
 
-// const getAllClusters = async (customer_code,vehicleNo) => {
-//   try {
-//     const query = {};
+const getAllClusters = async (customer_code,vehicleNo) => {
+  try {
+    const query = {};
 
-//     if (vehicleNo) query.vehicleNo = Number(vehicleNo);
-//     // Step 1: Fetch all clusters and populate customer data
-//     const clusters = await Cluster.find(query)
-//       .populate("customers.customerId")
-//       .lean();
+    if (vehicleNo) query.vehicleNo = Number(vehicleNo);
+    // Step 1: Fetch all clusters and populate customer data
+    const clusters = await Cluster.find(query)
+      .populate("customers.customerId")
+      .lean();
 
-//       if (vehicleNo) {
-//       const cluster7 = await Cluster.findOne({ clusterNo: 7 })
-//         .populate("customers.customerId")
-//         .lean();
-//       if (cluster7) {
-//         clusters.push(cluster7);
-//       }
-//     }
+      if (vehicleNo) {
+      const cluster7 = await Cluster.findOne({ clusterNo: 7 })
+        .populate("customers.customerId")
+        .lean();
+      if (cluster7) {
+        clusters.push(cluster7);
+      }
+    }
 
-//     const filteredClusters = [];
-//     const allCustomerIds = [];
+    const filteredClusters = [];
+    const allCustomerIds = [];
 
-//     // Step 2: Collect all customer IDs for GeoLocation lookup
-//     for (const cluster of clusters) {
-//       for (const cust of cluster.customers) {
-//         if (cust.customerId) {
-//           allCustomerIds.push(cust.customerId._id.toString());
-//         }
-//       }
-//     }
+    // Step 2: Collect all customer IDs for GeoLocation lookup
+    for (const cluster of clusters) {
+      for (const cust of cluster.customers) {
+        if (cust.customerId) {
+          allCustomerIds.push(cust.customerId._id.toString());
+        }
+      }
+    }
 
-//     // Step 3: Bulk fetch GeoLocations
-//     const geoData = await GeoLocation.find({
-//       customerId: { $in: allCustomerIds },
-//     }).lean();
+    // Step 3: Bulk fetch GeoLocations
+    const geoData = await GeoLocation.find({
+      customerId: { $in: allCustomerIds },
+    }).lean();
 
-//     const geoMap = new Map();
-//     for (const geo of geoData) {
-//       geoMap.set(geo.customerId.toString(), geo.MaingeoCoordinates);
-//     }
+    const geoMap = new Map();
+    for (const geo of geoData) {
+      geoMap.set(geo.customerId.toString(), geo.MaingeoCoordinates);
+    }
 
-//     // Step 4: Process each cluster
-//     for (const cluster of clusters) {
-//       const filteredCustomers = [];
-//       const cartridgeSizeCounts = {};
+    // Step 4: Process each cluster
+    for (const cluster of clusters) {
+      const filteredCustomers = [];
+      const cartridgeSizeCounts = {};
 
-//       for (const cust of cluster.customers) {
-//         if (!cust.customerId) continue;
+      for (const cust of cluster.customers) {
+        if (!cust.customerId) continue;
 
-//         const customerData = cust.customerId;
-//         const contactNumber = customerData.contact_number;
+        const customerData = cust.customerId;
+        const contactNumber = customerData.contact_number;
 
-//         if (!customer_code || contactNumber === customer_code) {
-//           cust.customerId = customerData._id;
-//           cust.name = customerData.display_name || customerData.name;
-//           cust.contact_number = contactNumber;
-//           cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
-//           cust.cf_cartridge_size = customerData.cf_cartridge_size;
+        if (!customer_code || contactNumber === customer_code) {
+          cust.customerId = customerData._id;
+          cust.name = customerData.display_name || customerData.name;
+          cust.contact_number = contactNumber;
+          cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
+          cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
-//           const geo = geoMap.get(customerData._id.toString());
-//           cust.geoCoordinates = geo || null;
+          const geo = geoMap.get(customerData._id.toString());
+          cust.geoCoordinates = geo || null;
 
-//           const size = customerData.cf_cartridge_size || "Unknown";
-//           const qty = parseInt(customerData.cf_cartridge_qty) || 0;
-//           cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + qty;
+          const size = customerData.cf_cartridge_size || "Unknown";
+          const qty = parseInt(customerData.cf_cartridge_qty) || 0;
+          cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + qty;
 
 
-//           filteredCustomers.push(cust);
-//         }
-//       }
+          filteredCustomers.push(cust);
+        }
+      }
 
-//       filteredCustomers.sort((a, b) => {
-//         const aIndex = a.indexNo ?? Infinity;
-//         const bIndex = b.indexNo ?? Infinity;
-//         return aIndex - bIndex;
-//       });
+      filteredCustomers.sort((a, b) => {
+        const aIndex = a.indexNo ?? Infinity;
+        const bIndex = b.indexNo ?? Infinity;
+        return aIndex - bIndex;
+      });
 
-//       cluster.cartridge_qty = filteredCustomers.reduce((sum, cust) => {
-//         return sum + (parseInt(cust.cf_cartridge_qty) || 0);
-//       }, 0);
+      cluster.cartridge_qty = filteredCustomers.reduce((sum, cust) => {
+        return sum + (parseInt(cust.cf_cartridge_qty) || 0);
+      }, 0);
 
-//       // Add filtered data to cluster
-//       cluster.customers = filteredCustomers;
-//       cluster.cartridgeSizeCounts = cartridgeSizeCounts;
+      // Add filtered data to cluster
+      cluster.customers = filteredCustomers;
+      cluster.cartridgeSizeCounts = cartridgeSizeCounts;
 
-//       filteredClusters.push(cluster);
-//     }
-//     return filteredClusters;
-//   } catch (error) {
-//     throw new Error("Failed to fetch clusters: " + error.message);
-//   }
-// };
+      filteredClusters.push(cluster);
+    }
+    return filteredClusters;
+  } catch (error) {
+    throw new Error("Failed to fetch clusters: " + error.message);
+  }
+};
 
-const getAllClusters = async (customer_code, vehicleNo) => {
+const getAllClusters1 = async (customer_code, vehicleNo) => {
   try {
     const query = {};
     if (vehicleNo) query.vehicleNo = Number(vehicleNo);
@@ -851,7 +851,6 @@ const getAllClusters = async (customer_code, vehicleNo) => {
     throw new Error("Failed to fetch clusters: " + error.message);
   }
 };
-
 
 const reassignMultipleCustomersToClustersOld = async (reassignments) => {
   const session = await mongoose.startSession();
