@@ -272,6 +272,22 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       "cf_cartridge_qty",
       "cf_google_map_link",
       "cf_singlelineaddress",
+      "status",
+      "customer_name",
+      "place_of_contact",
+      "created_time",
+      "currency_code",
+      "currency_symbol",
+      "payment_terms_label",
+      "cf_replacement_cycle_days",
+      "cf_replacement_day",
+      "cf_cartridge_size",
+      "cf_current_water_hardness_ppm",
+      "cf_total_members_living_in_the",
+      "updated_time",
+      "created_by",
+      "gst_treatment",
+      "is_portal_invitation_accepted",
     ];
 
 
@@ -380,6 +396,19 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
       await Customer.bulkWrite(updates);
     }
 
+    const dbCustomers = await Customer.find({}, { customer_id: 1 });
+    const dbCustomerIds = dbCustomers.map((c) => c.customer_id);
+    const notFoundCustomerIds = dbCustomerIds.filter(
+      (id) => !zohoCustomerIds.includes(id)
+    );
+
+    if (notFoundCustomerIds.length > 0) {
+      await Customer.updateMany(
+        { customer_id: { $in: notFoundCustomerIds } },
+        { $set: { status: "NotFound" } }
+      );
+    }
+
     return {
       message: "Sync complete",
       added: newCustomers.length,
@@ -462,6 +491,8 @@ const getAllcustomers = async (search, page, limit, isSubscription, Day) => {
   {
     filter.cf_replacement_day = Day;
   }
+
+   filter.status = { $ne: "NotFound" };
 
 
   const options = {
