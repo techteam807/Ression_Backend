@@ -503,6 +503,9 @@ const getAllcustomers = async (search, page, limit, isSubscription, Day) => {
     filter.cf_replacement_day = Day;
   }
 
+   filter.status = { $ne: "NotFound" };
+
+
   const options = {
     skip: (page - 1) * limit,
     limit: parseInt(limit),
