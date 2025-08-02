@@ -1,14 +1,12 @@
-
 const ProductS = require("../models/productModel");
 const Customer = require("../models/customerModel");
+const Warehouse = require("../models/wareHouseModel.js");
 const Log = require("../services/logManagementService.js");
 const { ProductEnum } = require("../config/global");
 
 const getPro = async (filter) => {
   try {
-    return await ProductS.find(filter)
-    .select("_id productCode").lean();
-    
+    return await ProductS.find(filter).select("_id productCode").lean();
   } catch (error) {
     throw new Error("Error fetching products: ", error.message);
   }
@@ -18,9 +16,14 @@ const formatAdapterSize = (size) => {
   if (!size) return size;
 
   let formattedSize = size.replace(/"/g, " inch"); // Replace all occurrences of `"`
-  formattedSize = formattedSize.replace(/\((.*?)\)/g, (match, p1) => ` | ${p1} mm`);
+  formattedSize = formattedSize.replace(
+    /\((.*?)\)/g,
+    (match, p1) => ` | ${p1} mm`
+  );
 
-  return formattedSize.includes("|") ? formattedSize : formattedSize.replace(" | ", "");
+  return formattedSize.includes("|")
+    ? formattedSize
+    : formattedSize.replace(" | ", "");
 };
 
 const formatProduct = (product) => ({
@@ -29,73 +32,99 @@ const formatProduct = (product) => ({
 });
 
 const getAllProductsold = async (filter = {}, search, page, limit) => {
-  if(search) {
+  if (search) {
     filter.$or = [
       // { productName: new RegExp(search, 'i') },
-      { productCode:new RegExp(search, 'i')},
-      { resinType:new RegExp(search, 'i')}
+      { productCode: new RegExp(search, "i") },
+      { resinType: new RegExp(search, "i") },
     ];
   }
 
   const options = {
-    skip:(page -1) * limit,
-    limit:parseInt(limit)
-  }
+    skip: (page - 1) * limit,
+    limit: parseInt(limit),
+  };
 
-  const products = await Product.find(filter).skip(options.skip).limit(options.limit);
+  const products = await Product.find(filter)
+    .skip(options.skip)
+    .limit(options.limit);
   const totalRecords = await Product.countDocuments(filter);
 
   return {
-    totalData:totalRecords,
-    currentPage:parseInt(page),
-    totalPages:Math.ceil(totalRecords/ limit),
+    totalData: totalRecords,
+    currentPage: parseInt(page),
+    totalPages: Math.ceil(totalRecords / limit),
     products,
   };
 };
 
-const getAllProducts = async (filter = {}, search,productStatus) => {
-
-  if(search) {
+const getAllProducts = async (filter = {}, search, productStatus) => {
+  if (search) {
     filter.$or = [
-      { productCode: new RegExp(search, "i")},
+      { productCode: new RegExp(search, "i") },
       { resinType: new RegExp(search, "i") },
-      {  productStatus: new RegExp(search, "i") },
+      { productStatus: new RegExp(search, "i") },
     ];
   }
-  if(productStatus){
-    filter.productStatus = productStatus
+  if (productStatus) {
+    filter.productStatus = productStatus;
   }
   // const products = await Product.find(filter);//default order
-  const products = await ProductS.find(filter).sort({ updatedAt: -1 });//desc order
-  
-  const newProducts = products.filter((p) => p.productStatus === ProductEnum.NEW).map(formatProduct);
-  const exhaustedProducts = products.filter((p) => p.productStatus === ProductEnum.EXHAUSTED).map(formatProduct);
+  const products = await ProductS.find(filter).sort({ updatedAt: -1 }); //desc order
+
+  let newProducts = products
+    .filter((p) => p.productStatus === ProductEnum.NEW)
+    .map(formatProduct);
+  const exhaustedProducts = products
+    .filter((p) => p.productStatus === ProductEnum.EXHAUSTED)
+    .map(formatProduct);
 
   //relevent fields
-   let inuseProducts = products.filter((p) => p.productStatus === ProductEnum.IN_USE).map(formatProduct);
+  let inuseProducts = products
+    .filter((p) => p.productStatus === ProductEnum.IN_USE)
+    .map(formatProduct);
 
-   const Customers = await Customer.find(
-     { products: { $in: inuseProducts.map((p) => p._id) } },
-     "contact_number first_name last_name mobile email display_name products" // Ensure 'products' is included
-   );
- 
-   inuseProducts = inuseProducts.map((product) => {
-     const customersForProduct = Customers.filter(
-       (cust) => Array.isArray(cust.products) && cust.products.includes(product._id.toString()) // Safe check
-     );
- 
-     return {
+  const Customers = await Customer.find(
+    { products: { $in: inuseProducts.map((p) => p._id) } },
+    "contact_number first_name last_name mobile email display_name products" // Ensure 'products' is included
+  );
+
+  const WareHouses = await Warehouse.find(
+    { products: { $in: newProducts.map((p) => p._id) } },
+    "wareHouseCode products"
+  );
+
+  newProducts = newProducts.map((product) => {
+    const wareHouseForProdcut = WareHouses.filter(
+      (war) =>
+        Array.isArray(war.products) &&
+        war.products.includes(product._id.toString())
+    );
+
+    return {
       ...product,
-       Customer: customersForProduct.length > 0 ? customersForProduct[0] : null,
-     };
-   });
- 
+      Warehouse: wareHouseForProdcut.length > 0 ? wareHouseForProdcut[0] : null,
+    };
+  });
+
+  inuseProducts = inuseProducts.map((product) => {
+    const customersForProduct = Customers.filter(
+      (cust) =>
+        Array.isArray(cust.products) &&
+        cust.products.includes(product._id.toString()) // Safe check
+    );
+
+    return {
+      ...product,
+      Customer: customersForProduct.length > 0 ? customersForProduct[0] : null,
+    };
+  });
+
   return {
     newProducts,
     exhaustedProducts,
-    inuseProducts
+    inuseProducts,
   };
-
 };
 
 const getProductById = async (id) => {
@@ -109,12 +138,14 @@ const createProduct = async (data) => {
 const updateProduct = async (id, data) => {
   const Product = await getProductById(id);
 
-  if(!Product)
-    {
-      return { success: false, message: "Product not found"};
-    }
-    
-  const product =await ProductS.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  if (!Product) {
+    return { success: false, message: "Product not found" };
+  }
+
+  const product = await ProductS.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  });
 
   return {
     success: true,
@@ -126,26 +157,32 @@ const updateProduct = async (id, data) => {
 const deleteProduct = async (id, productNotes) => {
   const Product = await getProductById(id);
 
-  if(!Product)
-  {
-    return { success: false, message: "Product not found"};
+  if (!Product) {
+    return { success: false, message: "Product not found" };
   }
 
-  const product = await ProductS.findByIdAndUpdate(id,{isActive:false,productStatus:ProductEnum.EXHAUSTED, productNotes:productNotes},{new:true});
+  const product = await ProductS.findByIdAndUpdate(
+    id,
+    {
+      isActive: false,
+      productStatus: ProductEnum.EXHAUSTED,
+      productNotes: productNotes,
+    },
+    { new: true }
+  );
 
   const DeleteProductsLog = {
-    products:id,
-    isActive:false,
-    status:ProductEnum.EXHAUSTED,
-    productNotes:productNotes,
-  }
+    products: id,
+    isActive: false,
+    status: ProductEnum.EXHAUSTED,
+    productNotes: productNotes,
+  };
 
-  await Log.createLog(DeleteProductsLog)
+  await Log.createLog(DeleteProductsLog);
 
-  await Customer.updateMany(
-    {products:id},
-    {$pull: {products:id} }
-  );
+  await Customer.updateMany({ products: id }, { $pull: { products: id } });
+
+  await Warehouse.updateMany({ products: id }, { $pull: { products: id } });
 
   return {
     success: true,
@@ -157,19 +194,22 @@ const deleteProduct = async (id, productNotes) => {
 const restoreProduct = async (id) => {
   const Product = await getProductById(id);
 
-  if(!Product)
-  {
-      return { success: false, message: "Product not found"};
+  if (!Product) {
+    return { success: false, message: "Product not found" };
   }
 
-  const product =await ProductS.findByIdAndUpdate(id,{isActive:true,productNotes:""},{new:true});
+  const product = await ProductS.findByIdAndUpdate(
+    id,
+    { isActive: true, productNotes: "" },
+    { new: true }
+  );
 
   const restoreProductsLog = {
-    products:id,
-    status:ProductEnum.EXHAUSTED,
-  }
+    products: id,
+    status: ProductEnum.EXHAUSTED,
+  };
 
-  await Log.createLog(restoreProductsLog)
+  await Log.createLog(restoreProductsLog);
 
   return {
     success: true,
@@ -179,74 +219,83 @@ const restoreProduct = async (id) => {
 };
 
 const associateProductWithCustomer = async (customerId, productId) => {
-    const customer = await Customer.findById(customerId);
-    if (!customer) throw new Error("Customer not found");
-  
-    const product = await ProductS.findById(productId);
-    if (!product) throw new Error("Product not found");
-  
-    if (customer.products.includes(productId)) {
-      throw new Error("Product is already associated with this customer");
-    }
-  
-    customer.products.push(productId);
-    await customer.save();
-    
-    return customer;
-  };
+  const customer = await Customer.findById(customerId);
+  if (!customer) throw new Error("Customer not found");
 
-  const getCustomerWithProducts = async (customerId) => {
-    return await Customer.findById(customerId).populate("products");
-  };
+  const product = await ProductS.findById(productId);
+  if (!product) throw new Error("Product not found");
 
-  const getProductBycode = async (product_code) => {
-    return await ProductS.findOne({productCode:product_code});
-  };
+  if (customer.products.includes(productId)) {
+    throw new Error("Product is already associated with this customer");
+  }
 
-  const getMultipleProductByCodeold = async (product_codes) => {
-    return await ProductS.find({productCode: {$in:product_codes}});
-  };
+  customer.products.push(productId);
+  await customer.save();
 
-  const getMultipleProductByCode = async (product_codes, session = null) => {
+  return customer;
+};
+
+const getCustomerWithProducts = async (customerId) => {
+  return await Customer.findById(customerId).populate("products");
+};
+
+const getProductBycode = async (product_code) => {
+  return await ProductS.findOne({ productCode: product_code });
+};
+
+const getMultipleProductByCodeold = async (product_codes) => {
+  return await ProductS.find({ productCode: { $in: product_codes } });
+};
+
+const getMultipleProductByCode = async (product_codes, session = null) => {
   const query = ProductS.find({ productCode: { $in: product_codes } });
   if (session) query.session(session);
   return await query;
 };
 
-  
-  const uploadProducts = async(products) => {
-    const insertedProducts = [];
-    const duplicateProductCodes = [];
-    const addedProducts = [];
+const uploadProducts = async (products) => {
+  const insertedProducts = [];
+  const duplicateProductCodes = [];
+  const addedProducts = [];
 
-    for (const product of products) {
-      const ExisProduct = await getProductBycode(product.productCode);
+  for (const product of products) {
+    const ExisProduct = await getProductBycode(product.productCode);
 
-      if(ExisProduct)
-      {
-        duplicateProductCodes.push(product.productCode);
-      }
-      else
-      {
-        insertedProducts.push(product);
-      }
+    if (ExisProduct) {
+      duplicateProductCodes.push(product.productCode);
+    } else {
+      insertedProducts.push(product);
     }
+  }
 
-    if (insertedProducts.length > 0) {
-      const AddedProducts = await ProductS.insertMany(insertedProducts);
-      addedProducts.push(AddedProducts);
-    }
+  if (insertedProducts.length > 0) {
+    const AddedProducts = await ProductS.insertMany(insertedProducts);
+    addedProducts.push(AddedProducts);
+  }
 
-    const insertedProductCodes = insertedProducts.map((p) => p.productCode) 
+  const insertedProductCodes = insertedProducts.map((p) => p.productCode);
 
-    return {
-      message:{
-        insertedCount: insertedProducts.length,
-        duplicateCount: duplicateProductCodes.length,
-        duplicateProductCodes,
-        insertedProductCodes,
-      }
-    };
+  return {
+    message: {
+      insertedCount: insertedProducts.length,
+      duplicateCount: duplicateProductCodes.length,
+      duplicateProductCodes,
+      insertedProductCodes,
+    },
   };
+};
 
-module.exports = { getPro, getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, associateProductWithCustomer, getCustomerWithProducts, getProductBycode, restoreProduct, getMultipleProductByCode, uploadProducts };
+module.exports = {
+  getPro,
+  getAllProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  associateProductWithCustomer,
+  getCustomerWithProducts,
+  getProductBycode,
+  restoreProduct,
+  getMultipleProductByCode,
+  uploadProducts,
+};

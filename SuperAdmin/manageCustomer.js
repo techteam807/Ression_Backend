@@ -1,12 +1,14 @@
 const Customer = require("../models/customerModel");
 const Product = require("../models/productModel");
 const AdminOtp = require("../models/adminOTPModel");
-const Log =  require('../services/logManagementService');
+const Warehouse = require("../models/wareHouseModel");
+const Log = require("../services/logManagementService");
 const { successResponse, errorResponse } = require("../config/response");
 const { ProductEnum } = require("../config/global");
 const { deleteProduct } = require("../services/productService");
 const { sendWhatsAppOtp } = require("../services/userServices");
 const { sendWhatsAppMsg } = require("../services/whatsappMsgServices");
+const mongoose = require("mongoose");
 
 module.exports.clearProducts = async (req, res) => {
   try {
@@ -28,6 +30,7 @@ module.exports.clearProducts = async (req, res) => {
 };
 
 module.exports.manageProductStatus = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const { productId, productStatus, customerId } = req.body;
 
@@ -43,13 +46,17 @@ module.exports.manageProductStatus = async (req, res) => {
       return errorResponse(res, "Invalid Product Status", 400);
     }
 
+    session.startTransaction();
+
     const product = await Product.findByIdAndUpdate(
       productId,
       { productStatus, isActive: true },
-      { new: true }
+      { new: true, session }
     );
 
     if (!product) {
+      await session.abortTransaction();
+      session.endSession();
       return errorResponse(res, "Product not found", 404);
     }
 
@@ -59,23 +66,33 @@ module.exports.manageProductStatus = async (req, res) => {
     ) {
       await Customer.updateMany(
         { products: productId },
-        { $pull: { products: productId } }
+        { $pull: { products: productId } },
+        { session }
       );
 
-      const genrateLogForProducts = 
-      {
-        products:productId,
-        status:productStatus,
-        productNotes:'Managed By Admin'
-      };
-      await Log.createLog(genrateLogForProducts);
+      await Warehouse.updateMany(
+        { products: productId },
+        { $pull: { products: productId } },
+        { session }
+      );
 
-      
+      const genrateLogForProducts = {
+        products: productId,
+        status: productStatus,
+        productNotes: "Managed By Admin",
+      };
+      await Log.createLog(genrateLogForProducts, session);
+
+      await session.commitTransaction();
+      session.endSession();
+
       return successResponse(res, "Product updated successfully", null, null);
     }
 
     if (productStatus === ProductEnum.IN_USE) {
       if (!customerId) {
+        await session.abortTransaction();
+        session.endSession();
         return errorResponse(
           res,
           "Customer ID is required for 'inuse' status",
@@ -85,36 +102,51 @@ module.exports.manageProductStatus = async (req, res) => {
 
       await Customer.updateMany(
         { products: productId },
-        { $pull: { products: productId } }
+        { $pull: { products: productId } },
+        { session }
       );
 
-      const customer = await Customer.findById(customerId);
+      await Warehouse.updateMany(
+        { products: productId },
+        { $pull: { products: productId } },
+        { session }
+      );
+
+      const customer = await Customer.findById(customerId).session(session);
       if (!customer) {
+        await session.abortTransaction();
+        session.endSession();
         return errorResponse(res, "Customer not found", 404);
       }
 
       if (!customer.products.includes(productId)) {
         customer.products.push(productId);
-        await customer.save();
+        await customer.save({ session });
       }
 
       const customerName = customer.display_name;
       const rawMobile = customer.mobile;
-      const cutomerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
-      const genrateLogForIN_USE = 
-      {
-        customerId:customerId,
-        products:productId,
-        status:ProductEnum.IN_USE,
-        productNotes:'Managed By Admin'
+      const cutomerMobileNumber = rawMobile.replace(/\D/g, "").slice(-10);
+      const genrateLogForIN_USE = {
+        customerId: customerId,
+        products: productId,
+        status: ProductEnum.IN_USE,
+        productNotes: "Managed By Admin",
       };
-      await sendWhatsAppMsg(cutomerMobileNumber,customerName);
-      await Log.createLog(genrateLogForIN_USE);
+      await sendWhatsAppMsg(cutomerMobileNumber, customerName);
+      await Log.createLog(genrateLogForIN_USE, session);
+
+      await session.commitTransaction();
+      session.endSession();
 
       return successResponse(res, "Product updated successfully", null, null);
     }
+    await session.commitTransaction();
+    session.endSession();
   } catch (error) {
-    return errorResponse(res, "Error updating product status", 500, error);
+    await session.abortTransaction();
+    session.endSession();
+    return errorResponse(res, "Error updating product status", 500, error.message);    
   }
 };
 
@@ -173,9 +205,8 @@ module.exports.deleteProductProcess = async (req, res) => {
 };
 
 module.exports.manageProductCode = async (req, res) => {
-  try
-  {
-    const {productId , NewproductCode } = req.body;
+  try {
+    const { productId, NewproductCode } = req.body;
 
     if (!productId || !NewproductCode) {
       return errorResponse(
@@ -192,20 +223,23 @@ module.exports.manageProductCode = async (req, res) => {
 
     const updateProduct = await Product.findByIdAndUpdate(
       productId,
-      { productCode:NewproductCode},
+      { productCode: NewproductCode },
       { new: true }
     );
 
     const genrateLogForProductsUpdate = {
-      products:productId,
-      status:oldProduct.productStatus,
-      productNotes:`Product Code Update: ${oldProduct.productCode} to ${NewproductCode} `
-    }
-    await Log.createLog(genrateLogForProductsUpdate)
-  return successResponse(res, "Product Code updated successfully", null, null);
-  }
-  catch (error)
-  {
+      products: productId,
+      status: oldProduct.productStatus,
+      productNotes: `Product Code Update: ${oldProduct.productCode} to ${NewproductCode} `,
+    };
+    await Log.createLog(genrateLogForProductsUpdate);
+    return successResponse(
+      res,
+      "Product Code updated successfully",
+      null,
+      null
+    );
+  } catch (error) {
     return errorResponse(
       res,
       error.message.includes("E11000")
