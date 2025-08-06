@@ -72,7 +72,7 @@ const getReports= async (year, month, startDate, endDate, filter = {}) => {
   }
 
   // 1. Get all customers (filter on isSubscription if needed)
-  const customers = await Customers.find({ isSubscription: true }).select('display_name _id contact_number');
+  const customers = await Customers.find().select('display_name _id contact_number');
 
   // 2. Get all reports for the selected date filter
   const reports = await Reports.find(reportFilter).lean();

@@ -417,7 +417,7 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
     if (notFoundCustomerIds.length > 0) {
       await Customer.updateMany(
         { customer_id: { $in: notFoundCustomerIds } },
-        { $set: { status: "not found" } }
+        { $set: { status: "NotFound" } }
       );
     }
 
