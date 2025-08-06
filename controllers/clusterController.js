@@ -19,8 +19,10 @@ const getClusteredCustomers = async (req, res) => {
 const getClusters = async (req, res) => {
   try {
     const customer_code= req.query.customer_code;
+    const vehicleNo= req.query.vehicleNo;
 
-    const clusters = await getAllClusters(customer_code);
+
+    const clusters = await getAllClusters(customer_code,vehicleNo);
 
     return successResponse(res, "Clusters fetched successfully", null, clusters);
   } catch (error) {
@@ -31,6 +33,9 @@ const getClusters = async (req, res) => {
 const reassignMultipleCustomers = async (req, res) => {
   try {
     const { reassignments } = req.body;
+
+    console.log("Reassignments received:", reassignments);
+    
 
     if (!Array.isArray(reassignments)) {
       return errorResponse(res, "Reassignments array is required.", 400); 
@@ -55,8 +60,10 @@ const reassignMultipleCustomers = async (req, res) => {
 
 const optimizedRoute = async (req, res) => {
   try{
-    const clusterNo= req.query.clusterNo;
- const result = await fetchOptimizedRoutes(Number(clusterNo));
+    const clusterId= req.query.clusterId;
+    const vehicleNo= req.query.vehicleNo;
+
+ const result = await fetchOptimizedRoutes(clusterId,vehicleNo);
  return successResponse(res, "Customers Routes",null, result);
   }
   catch (error)

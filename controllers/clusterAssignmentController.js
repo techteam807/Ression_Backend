@@ -23,7 +23,8 @@ const assignCluster = async (req, res) => {
 
 const getClusterDropdown = async (req, res) => {
     try {
-        const result = await clusterAssignmentService.getClusterDropdown();
+         const vehicleNo = req.query.vehicleNo;
+        const result = await clusterAssignmentService.getClusterDropdown(vehicleNo);
         
         res.status(200).json({
             success: true,

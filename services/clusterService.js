@@ -666,12 +666,24 @@ const getAllClusters_old = async (customer_code) => {
   }
 };
 
-const getAllClusters = async (customer_code) => {
+const getAllClusters = async (customer_code,vehicleNo) => {
   try {
+    const query = {};
+
+    if (vehicleNo) query.vehicleNo = Number(vehicleNo);
     // Step 1: Fetch all clusters and populate customer data
-    const clusters = await Cluster.find()
+    const clusters = await Cluster.find(query)
       .populate("customers.customerId")
       .lean();
+
+      if (vehicleNo) {
+      const cluster7 = await Cluster.findOne({ clusterNo: 7 })
+        .populate("customers.customerId")
+        .lean();
+      if (cluster7) {
+        clusters.push(cluster7);
+      }
+    }
 
     const filteredClusters = [];
     const allCustomerIds = [];
@@ -714,7 +726,8 @@ const getAllClusters = async (customer_code) => {
           cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
           const geo = geoMap.get(customerData._id.toString());
-          cust.geoCoordinates = geo || null;
+          cust.geoCoordinates = geo || {type: "Point",
+    coordinates: [Number(23.0794),Number(72.3813)]};
 
           const size = customerData.cf_cartridge_size || "Unknown";
           const qty = parseInt(customerData.cf_cartridge_qty) || 0;
@@ -741,6 +754,100 @@ const getAllClusters = async (customer_code) => {
 
       filteredClusters.push(cluster);
     }
+    return filteredClusters;
+  } catch (error) {
+    throw new Error("Failed to fetch clusters: " + error.message);
+  }
+};
+
+const getAllClusters1 = async (customer_code, vehicleNo) => {
+  try {
+    const query = {};
+    if (vehicleNo) query.vehicleNo = Number(vehicleNo);
+
+    // Step 1: Fetch clusters with populated customer data
+    let clusters = await Cluster.find(query)
+      .populate("customers.customerId")
+      .lean();
+
+    // Add cluster 7 if vehicleNo is provided (avoid duplicates)
+    if (vehicleNo) {
+      const cluster7 = await Cluster.findOne({ clusterNo: 7 })
+        .populate("customers.customerId")
+        .lean();
+      if (cluster7 && !clusters.some(c => c._id.toString() === cluster7._id.toString())) {
+        clusters.push(cluster7);
+      }
+    }
+
+    // Collect all customer IDs for GeoLocation lookup
+    const allCustomerIds = clusters.flatMap(cluster =>
+      cluster.customers
+        .filter(cust => cust.customerId)
+        .map(cust => cust.customerId._id.toString())
+    );
+
+    // Step 2: Fetch all GeoLocations
+    const geoData = await GeoLocation.find({
+      customerId: { $in: allCustomerIds },
+    }).lean();
+
+    const geoMap = new Map();
+    for (const geo of geoData) {
+      geoMap.set(geo.customerId.toString(), geo.MaingeoCoordinates);
+    }
+
+    // Step 3: Process clusters
+    const filteredClusters = [];
+    for (const cluster of clusters) {
+      const filteredCustomers = [];
+      const cartridgeSizeCounts = {};
+
+      for (const cust of cluster.customers) {
+        if (!cust.customerId) continue;
+        const customerData = cust.customerId;
+        const contactNumber = customerData.contact_number;
+
+        // Apply customer_code filter (if provided)
+        if (!customer_code || contactNumber === customer_code) {
+          // Map customer fields
+          const updatedCustomer = {
+            ...cust,
+            customerId: customerData._id,
+            name: customerData.display_name || customerData.name,
+            contact_number: contactNumber,
+            cf_cartridge_qty: customerData.cf_cartridge_qty,
+            cf_cartridge_size: customerData.cf_cartridge_size,
+            geoCoordinates: geoMap.get(customerData._id.toString()) || {type: "Point",
+    coordinates: ['23.0794','72.3813']}
+          };
+
+          // Cartridge size count
+          const size = customerData.cf_cartridge_size || "Unknown";
+          const qty = parseInt(customerData.cf_cartridge_qty) || 0;
+          cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + qty;
+
+          filteredCustomers.push(updatedCustomer);
+        }
+      }
+
+      // Sort by indexNo
+      filteredCustomers.sort((a, b) => (a.indexNo ?? Infinity) - (b.indexNo ?? Infinity));
+
+      // Cartridge quantity
+      const totalQty = filteredCustomers.reduce((sum, cust) => {
+        return sum + (parseInt(cust.cf_cartridge_qty) || 0);
+      }, 0);
+
+      // Push updated cluster
+      filteredClusters.push({
+        ...cluster,
+        customers: filteredCustomers,
+        cartridge_qty: totalQty,
+        cartridgeSizeCounts,
+      });
+    }
+
     return filteredClusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
@@ -994,7 +1101,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
     // }
 
     // 3. Assign each customer individually
-    for (const { customerId, newClusterNo, indexNo } of reassignments) {
+    for (const { customerId, newClusterId, indexNo } of reassignments) {
       const customer = customerMap.get(customerId);
 
       if (!customer) {
@@ -1034,7 +1141,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 
       const cartridgeQty = parseFloat(customer?.cf_cartridge_qty) || 0;
 
-      let cluster = await Cluster.findOne({ clusterNo: newClusterNo }).session(session);
+      let cluster = await Cluster.findOne({ _id: newClusterId }).session(session);
       let assigned = true;
 
       const currentCustomerCount = cluster?.customers.length || 0;
@@ -1066,7 +1173,7 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
 
 
       if (!cluster) {
-        throw new Error(`Cluster with clusterNo ${newClusterNo} not found.`);
+        throw new Error(`Cluster with ClusterId ${newClusterId} not found.`);
       }
 
       // ✅ Final add to cluster
@@ -1079,30 +1186,64 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
         sequenceNo,
       };
 
-      cluster.customers.push(newCustomerObj);
+      // cluster.customers.push(newCustomerObj);
+      if (indexNo !== undefined && indexNo >= 0 && indexNo <= cluster.customers.length) {
+  cluster.customers.splice(indexNo, 0, newCustomerObj);
+} else {
+  cluster.customers.push(newCustomerObj); // Default append
+}
+
       affectedClusterIds.add(cluster._id.toString());
 
       await cluster.save({ session });
 
-      console.log(`Assigned to cluster ${assigned ? newClusterNo : FALLBACK_CLUSTER_NO}`);
+      console.log(`Assigned to cluster ${assigned ? newClusterId : FALLBACK_CLUSTER_NO}`);
     }
+
+    // for (const clusterId of affectedClusterIds) {
+    //   const cluster = await Cluster.findById(clusterId).session(session);
+    //   if (!cluster) continue;
+
+    //   const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+    //   const customersInCluster = await Customer.find({
+    //     _id: { $in: customerIdsInCluster },
+    //   }).session(session).lean();
+
+    //   cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
+    //     const qty = parseFloat(c?.cf_cartridge_qty);
+    //     return sum + (isNaN(qty) ? 0 : qty);
+    //   }, 0);
+
+    //   await cluster.save({ session });
+    // }
 
     for (const clusterId of affectedClusterIds) {
-      const cluster = await Cluster.findById(clusterId).session(session);
-      if (!cluster) continue;
+  const cluster = await Cluster.findById(clusterId).session(session);
+  if (!cluster) continue;
 
-      const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
-      const customersInCluster = await Customer.find({
-        _id: { $in: customerIdsInCluster },
-      }).session(session).lean();
+  // ✅ Reindex all customers in the cluster
+  cluster.customers = cluster.customers.map((cust, i) => ({
+    ...cust,
+    indexNo: i,
+    sequenceNo: i + 1,
+  }));
 
-      cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
-        const qty = parseFloat(c?.cf_cartridge_qty);
-        return sum + (isNaN(qty) ? 0 : qty);
-      }, 0);
+  // ✅ Recalculate cartridge_qty
+  const customerIdsInCluster = cluster.customers.map((c) => c.customerId);
+  const customersInCluster = await Customer.find({
+    _id: { $in: customerIdsInCluster },
+  })
+    .session(session)
+    .lean();
 
-      await cluster.save({ session });
-    }
+  cluster.cartridge_qty = customersInCluster.reduce((sum, c) => {
+    const qty = parseFloat(c?.cf_cartridge_qty);
+    return sum + (isNaN(qty) ? 0 : qty);
+  }, 0);
+
+  await cluster.save({ session });
+}
+
 
     await session.commitTransaction();
     session.endSession();
@@ -1150,10 +1291,14 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   };
 }
 
-const fetchOptimizedRoutes = async (clusterNo) => {
+const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
   let clusters = await getAllClusters();
-  if (clusterNo !== undefined && clusterNo !== null && !isNaN(clusterNo)) {
-    clusters = clusters.filter((cluster) => cluster.clusterNo === clusterNo);
+if (clusterId) {
+  clusters = clusters.filter((cluster) => cluster._id.toString() === clusterId.toString());
+}
+
+    if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
+    clusters = clusters.filter((cluster) => cluster.vehicleNo === Number(vehicleNo));
   }
 
   const results = [];
@@ -1237,6 +1382,7 @@ const fetchOptimizedRoutes = async (clusterNo) => {
     );
 
     results.push({
+      clusterId:cluster._id,
       clusterNo: cluster.clusterNo,
       cartridge_qty: newQty,
       totalDistance: totalDistance.toFixed(2),
