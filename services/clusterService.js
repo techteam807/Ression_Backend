@@ -689,7 +689,17 @@ const getAllClusters = async (customer_code,vehicleNo) => {
     const allCustomerIds = [];
 
     // Step 2: Collect all customer IDs for GeoLocation lookup
+    // for (const cluster of clusters) {
+    //   for (const cust of cluster.customers) {
+    //     if (cust.customerId) {
+    //       allCustomerIds.push(cust.customerId._id.toString());
+    //     }
+    //   }
+    // }
+
+    let totalInRequestedVehicle = 0;
     for (const cluster of clusters) {
+      totalInRequestedVehicle += cluster.customers.length;
       for (const cust of cluster.customers) {
         if (cust.customerId) {
           allCustomerIds.push(cust.customerId._id.toString());
@@ -754,7 +764,18 @@ const getAllClusters = async (customer_code,vehicleNo) => {
 
       filteredClusters.push(cluster);
     }
-    return filteredClusters;
+
+        const allClusters = await Cluster.find({}).lean();
+    let totalInClusters = 0;
+    for (const cluster of allClusters) {
+      totalInClusters += cluster.customers.length;
+    }
+    return {
+      clusters: filteredClusters,
+      totalInClusters,
+      totalInRequestedVehicle
+    };
+    // return filteredClusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
   }
@@ -1340,6 +1361,10 @@ if (clusterId) {
       const leg = googleRouteData.legs[idx]; // legs[idx] is from previous to current
       const dist = leg.distance.value / 1000; // meters to km
 
+            const indexNoMap = new Map(
+  cluster.customers.map(c => [c.customerId.toString(), c.indexNo])
+);
+
       totalDistance += dist;
 
       visitSequence.push({
@@ -1354,6 +1379,7 @@ if (clusterId) {
       updatedCustomers.push({
         customerId: new mongoose.Types.ObjectId(customer.customerId),
         sequenceNo: idx + 1,
+        indexNo: indexNoMap.get(customer.customerId.toString()),
       });
     });
 
