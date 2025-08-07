@@ -1340,6 +1340,10 @@ if (clusterId) {
       const leg = googleRouteData.legs[idx]; // legs[idx] is from previous to current
       const dist = leg.distance.value / 1000; // meters to km
 
+            const indexNoMap = new Map(
+  cluster.customers.map(c => [c.customerId.toString(), c.indexNo])
+);
+
       totalDistance += dist;
 
       visitSequence.push({
@@ -1354,6 +1358,7 @@ if (clusterId) {
       updatedCustomers.push({
         customerId: new mongoose.Types.ObjectId(customer.customerId),
         sequenceNo: idx + 1,
+        indexNo: indexNoMap.get(customer.customerId.toString()),
       });
     });
 
