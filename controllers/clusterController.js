@@ -20,9 +20,10 @@ const getClusters = async (req, res) => {
   try {
     const customer_code= req.query.customer_code;
     const vehicleNo= req.query.vehicleNo;
+    const clsuterNo = req.query.clsuterNo;
 
 
-    const clusters = await getAllClusters(customer_code,vehicleNo);
+    const clusters = await getAllClusters(customer_code,vehicleNo,clsuterNo);
 
     return successResponse(res, "Clusters fetched successfully", null, clusters);
   } catch (error) {

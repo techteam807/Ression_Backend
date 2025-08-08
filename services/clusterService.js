@@ -666,11 +666,12 @@ const getAllClusters_old = async (customer_code) => {
   }
 };
 
-const getAllClusters = async (customer_code,vehicleNo) => {
+const getAllClusters = async (customer_code,vehicleNo,clsuterNo) => {
   try {
     const query = {};
 
     if (vehicleNo) query.vehicleNo = Number(vehicleNo);
+    if (clsuterNo !== null) query.clusterNo = Number(clsuterNo);
     // Step 1: Fetch all clusters and populate customer data
     const clusters = await Cluster.find(query)
       .populate("customers.customerId")
