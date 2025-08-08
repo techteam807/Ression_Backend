@@ -701,15 +701,28 @@ const getAllClusters = async (customer_code,vehicleNo,clusterNo) => {
     //   }
     // }
 
+    // let totalInRequestedVehicle = 0;
+    // for (const cluster of clusters) {
+    //   totalInRequestedVehicle += cluster.customers.length;
+    //   for (const cust of cluster.customers) {
+    //     if (cust.customerId) {
+    //       allCustomerIds.push(cust.customerId._id.toString());
+    //     }
+    //   }
+    // }
+
     let totalInRequestedVehicle = 0;
-    for (const cluster of clusters) {
-      totalInRequestedVehicle += cluster.customers.length;
-      for (const cust of cluster.customers) {
-        if (cust.customerId) {
-          allCustomerIds.push(cust.customerId._id.toString());
-        }
-      }
+for (const cluster of clusters) {
+  if (cluster.clusterNo !== 7) { // skip cluster 7
+    totalInRequestedVehicle += cluster.customers.length;
+  }
+  for (const cust of cluster.customers) {
+    if (cust.customerId) {
+      allCustomerIds.push(cust.customerId._id.toString());
     }
+  }
+}
+
 
     // Step 3: Bulk fetch GeoLocations
     const geoData = await GeoLocation.find({
