@@ -1388,9 +1388,9 @@ if (clusterId) {
       const leg = googleRouteData.legs[idx]; // legs[idx] is from previous to current
       const dist = leg.distance.value / 1000; // meters to km
 
-            const indexNoMap = new Map(
-  cluster.customers.map(c => [c.customerId.toString(), c.indexNo])
-);
+      const indexNoMap = new Map(
+        cluster.customers.map((c) => [c.customerId.toString(), c.indexNo])
+      );
 
       totalDistance += dist;
 
