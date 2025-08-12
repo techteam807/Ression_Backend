@@ -666,11 +666,16 @@ const getAllClusters_old = async (customer_code) => {
   }
 };
 
-const getAllClusters = async (customer_code,vehicleNo) => {
+const getAllClusters = async (customer_code,vehicleNo,clusterNo) => {
   try {
     const query = {};
 
     if (vehicleNo) query.vehicleNo = Number(vehicleNo);
+if (!isNaN(Number(clusterNo))) {
+  query.clusterNo = Number(clusterNo);
+}
+
+
     // Step 1: Fetch all clusters and populate customer data
     const clusters = await Cluster.find(query)
       .populate("customers.customerId")
@@ -689,13 +694,36 @@ const getAllClusters = async (customer_code,vehicleNo) => {
     const allCustomerIds = [];
 
     // Step 2: Collect all customer IDs for GeoLocation lookup
-    for (const cluster of clusters) {
-      for (const cust of cluster.customers) {
-        if (cust.customerId) {
-          allCustomerIds.push(cust.customerId._id.toString());
-        }
-      }
+    // for (const cluster of clusters) {
+    //   for (const cust of cluster.customers) {
+    //     if (cust.customerId) {
+    //       allCustomerIds.push(cust.customerId._id.toString());
+    //     }
+    //   }
+    // }
+
+    // let totalInRequestedVehicle = 0;
+    // for (const cluster of clusters) {
+    //   totalInRequestedVehicle += cluster.customers.length;
+    //   for (const cust of cluster.customers) {
+    //     if (cust.customerId) {
+    //       allCustomerIds.push(cust.customerId._id.toString());
+    //     }
+    //   }
+    // }
+
+    let totalInRequestedVehicle = 0;
+for (const cluster of clusters) {
+  if (cluster.clusterNo !== 7) { // skip cluster 7
+    totalInRequestedVehicle += cluster.customers.length;
+  }
+  for (const cust of cluster.customers) {
+    if (cust.customerId) {
+      allCustomerIds.push(cust.customerId._id.toString());
     }
+  }
+}
+
 
     // Step 3: Bulk fetch GeoLocations
     const geoData = await GeoLocation.find({
@@ -754,7 +782,18 @@ const getAllClusters = async (customer_code,vehicleNo) => {
 
       filteredClusters.push(cluster);
     }
-    return filteredClusters;
+
+        const allClusters = await Cluster.find({}).lean();
+    let totalInClusters = 0;
+    for (const cluster of allClusters) {
+      totalInClusters += cluster.customers.length;
+    }
+    return {
+      clusters: filteredClusters,
+      totalInClusters,
+      totalInRequestedVehicle
+    };
+    // return filteredClusters;
   } catch (error) {
     throw new Error("Failed to fetch clusters: " + error.message);
   }
@@ -1292,7 +1331,16 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
 }
 
 const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
-  let clusters = await getAllClusters();
+  let  { clusters } = await getAllClusters();
+
+if (clusterId) {
+  clusters = clusters.filter((cluster) => cluster._id.toString() === clusterId.toString());
+}
+
+if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
+  clusters = clusters.filter((cluster) => cluster.vehicleNo === Number(vehicleNo));
+}
+
 if (clusterId) {
   clusters = clusters.filter((cluster) => cluster._id.toString() === clusterId.toString());
 }

@@ -124,7 +124,7 @@ module.exports.manageProductStatus = async (req, res) => {
         await customer.save({ session });
       }
 
-      const customerName = customer.display_name;
+      const customerName = customer.first_name;
       const rawMobile = customer.mobile;
       const cutomerMobileNumber = rawMobile.replace(/\D/g, "").slice(-10);
       const genrateLogForIN_USE = {

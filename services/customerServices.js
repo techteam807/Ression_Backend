@@ -914,7 +914,7 @@ const manageCustomerAndProduct = async (
     console.log(customerEXHAUSTEDId);
     const rawMobile = Customers.mobile;
     const customerMobileNumber = rawMobile.replace(/\D/g, "").slice(-10);
-    const customerName = Customers.display_name;
+    const customerName = Customers.first_name;
     // Validate Products
     const foundProductCodes = ProductS.map((p) => p.productCode);
     const missingProductCodes = Product_Codes.filter(
@@ -1099,7 +1099,7 @@ const manageCustomerAndProduct = async (
 const getCustomerDropdown = async (filter) => {
   try {
     return await Customer.find(filter)
-      .select("_id display_name contact_number")
+      .select("_id display_name contact_number first_name last_name")
       .lean();
   } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
@@ -1109,7 +1109,7 @@ const getCustomerDropdown = async (filter) => {
 const getCustomerlocations = async (filter) => {
   try {
     return await Customer.find(filter)
-      .select("_id display_name contact_number geoCoordinates")
+      .select("_id display_name contact_number geoCoordinates first_name last_name")
       .lean();
   } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
@@ -1163,7 +1163,7 @@ const sendCartidgeMissedMessage = async (cust_id) => {
     return { success: false, message: `Customer Not Found With Id ${cust_id}` };
   }
 
-  const Customer_Name = customer.display_name;
+  const Customer_Name = customer.first_name;
   const Customer_Phone = customer.mobile;
 
   await sendMissedCatridgeMsg(Customer_Phone, Customer_Name);

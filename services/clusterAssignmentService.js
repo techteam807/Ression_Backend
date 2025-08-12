@@ -53,18 +53,18 @@ const assignCluster = async (userId, clusterId, date) => {
             throw new Error('User already has an assignment for this date');
         }
 
-        // Check if cluster is already assigned to any user for this date
-        const existingClusterAssignment = await ClusterAssignment.findOne({
-            clusterId,
-            date: {
-                $gte: indianDate,
-                $lt: new Date(indianDate.getTime() + 24 * 60 * 60 * 1000)
-            }
-        });
+        // // Check if cluster is already assigned to any user for this date
+        // const existingClusterAssignment = await ClusterAssignment.findOne({
+        //     clusterId,
+        //     date: {
+        //         $gte: indianDate,
+        //         $lt: new Date(indianDate.getTime() + 24 * 60 * 60 * 1000)
+        //     }
+        // });
 
-        if (existingClusterAssignment) {
-            throw new Error('This cluster is already assigned to another user for the selected date');
-        }
+        // if (existingClusterAssignment) {
+        //     throw new Error('This cluster is already assigned to another user for the selected date');
+        // }
 
         // Create new cluster assignment
         const clusterAssignment = new ClusterAssignment({
@@ -136,7 +136,7 @@ const getAssignments = async (filters = {}) => {
                 path: 'clusterId',
                 populate: {
                     path: 'customers.customerId',
-                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size cf_detailed_address'
+                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size cf_detailed_address first_name last_name'
                 }
             })
             .sort({ date: 1 })
@@ -285,7 +285,7 @@ const getAllAssignments = async (filters = {}) => {
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
             .populate('clusterId', 'clusterNo clusterName vehicleNo')
-            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
+            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty first_name last_name' })
             .sort({ date: -1 })
             .lean();
 
@@ -424,7 +424,7 @@ const clusterAssignmentById = async (assignmentId) => {
             path: 'clusterId',
             populate: {
                 path: 'customers.customerId',
-                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty'
+                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty first_name last_name cf_cartridge_size'
             }
         })
         .lean();
@@ -461,6 +461,22 @@ const clusterAssignmentById = async (assignmentId) => {
                 const bIndex = b.indexNo ?? Infinity;
                 return aIndex - bIndex;
             });
+
+            const cartridgeSizeCounts = {};
+            for (const customer of assignment.clusterId.customers) {
+                        console.log("cust:", customer);
+
+                        // const size = customer.customerId?.cf_cartridge_size || "Unknown";
+                        // cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+                        const size =
+                          customer.customerId?.cf_cartridge_size || "Unknown";
+                        const qty =
+                          parseInt(customer.customerId.cf_cartridge_qty) || 0;
+                        cartridgeSizeCounts[size] =
+                          (cartridgeSizeCounts[size] || 0) + qty;
+                    }
+                    assignment.cartridgeSizeCounts = cartridgeSizeCounts
 
         }
     } catch (error) {
