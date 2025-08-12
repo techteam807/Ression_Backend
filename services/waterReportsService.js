@@ -42,7 +42,7 @@ const getReportsold = async (year, month, filter = {}) => {
     filter.$expr = { $eq: [{ $month: "$date" }, month] };
   }
 
-  return await Reports.find(filter).populate('customerId', 'display_name');
+  return await Reports.find(filter).populate('customerId', 'display_name ');
 };
 
 const getReports= async (year, month, startDate, endDate, filter = {}) => {
