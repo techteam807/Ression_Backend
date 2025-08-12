@@ -56,7 +56,7 @@ exports.getAllLogs = async (startDate, endDate, productId, userId, customerId, s
     }
   
     const logs = await LogManagement.find(filter)
-      .populate({ path: "customerId", select: "display_name contact_number email mobile" })
+      .populate({ path: "customerId", select: "display_name contact_number email mobile first_name last_name" })
       .populate({ path: "userId", select: "user_name mobile_number" })
       .populate({ path: "products", select: "productCode" })
       .sort({ timestamp: -1 });
@@ -70,7 +70,7 @@ exports.getLogsByCustomer = async (customerId, page, limit) => {
     const skip = (page - 1) * limit;
 
     const logs = await LogManagement.find({ customerId })
-        .populate({ path: "customerId", select: "display_name contact_number email mobile" })
+        .populate({ path: "customerId", select: "display_name contact_number email mobile first_name last_name" })
         .populate({ path: "userId", select: "user_name mobile_number" })
         .populate({ path: "products", select: "productCode" })
         .sort({ timestamp: -1 })
@@ -129,7 +129,7 @@ exports.getLogsByProduct = async (productId, startDate, endDate) => {
     }
 
     const logs = await LogManagement.find(filter)
-        .populate({ path: "customerId", select: "display_name contact_number email mobile" })
+        .populate({ path: "customerId", select: "display_name contact_number email mobile first_name last_name" })
         .populate({ path: "userId", select: "user_name mobile_number" })
         .populate({ path: "products", select: "productCode" })
         .sort({ timestamp: -1 });
@@ -143,7 +143,7 @@ exports.getLogsByUser = async (userId, page, limit) => {
     const skip = (page - 1) * limit;
 
     const logs = await LogManagement.find({ userId })
-        .populate({ path: "customerId", select: "display_name contact_number email mobile" })
+        .populate({ path: "customerId", select: "display_name contact_number email mobile first_name last_name" })
         .populate({ path: "userId", select: "user_name mobile_number" })
         .populate({ path: "products", select: "productCode" })
         .sort({ timestamp: -1 })
