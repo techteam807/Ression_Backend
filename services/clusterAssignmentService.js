@@ -424,7 +424,7 @@ const clusterAssignmentById = async (assignmentId) => {
             path: 'clusterId',
             populate: {
                 path: 'customers.customerId',
-                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty'
+                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size'
             }
         })
         .lean();
@@ -461,6 +461,22 @@ const clusterAssignmentById = async (assignmentId) => {
                 const bIndex = b.indexNo ?? Infinity;
                 return aIndex - bIndex;
             });
+
+            const cartridgeSizeCounts = {};
+            for (const customer of assignment.clusterId.customers) {
+                        console.log("cust:", customer);
+
+                        // const size = customer.customerId?.cf_cartridge_size || "Unknown";
+                        // cartridgeSizeCounts[size] = (cartridgeSizeCounts[size] || 0) + 1;
+
+                        const size =
+                          customer.customerId?.cf_cartridge_size || "Unknown";
+                        const qty =
+                          parseInt(customer.customerId.cf_cartridge_qty) || 0;
+                        cartridgeSizeCounts[size] =
+                          (cartridgeSizeCounts[size] || 0) + qty;
+                    }
+                    assignment.cartridgeSizeCounts = cartridgeSizeCounts
 
         }
     } catch (error) {
