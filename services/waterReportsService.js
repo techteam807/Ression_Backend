@@ -117,7 +117,7 @@ const generateWaterReports = async (customerId, logIds, docUrl) => {
   const customer = await Customers.findById(customerId);
   const rawMobile = customer.mobile;
   const customerMobileNumber = rawMobile.replace(/\D/g, '').slice(-10);
-  const customerName = customer.display_name;
+  const customerName = customer.first_name;
 
   const reportIds = reports.map(r => r._id);
 
