@@ -53,18 +53,18 @@ const assignCluster = async (userId, clusterId, date) => {
             throw new Error('User already has an assignment for this date');
         }
 
-        // Check if cluster is already assigned to any user for this date
-        const existingClusterAssignment = await ClusterAssignment.findOne({
-            clusterId,
-            date: {
-                $gte: indianDate,
-                $lt: new Date(indianDate.getTime() + 24 * 60 * 60 * 1000)
-            }
-        });
+        // // Check if cluster is already assigned to any user for this date
+        // const existingClusterAssignment = await ClusterAssignment.findOne({
+        //     clusterId,
+        //     date: {
+        //         $gte: indianDate,
+        //         $lt: new Date(indianDate.getTime() + 24 * 60 * 60 * 1000)
+        //     }
+        // });
 
-        if (existingClusterAssignment) {
-            throw new Error('This cluster is already assigned to another user for the selected date');
-        }
+        // if (existingClusterAssignment) {
+        //     throw new Error('This cluster is already assigned to another user for the selected date');
+        // }
 
         // Create new cluster assignment
         const clusterAssignment = new ClusterAssignment({
