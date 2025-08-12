@@ -42,7 +42,7 @@ const getReportsold = async (year, month, filter = {}) => {
     filter.$expr = { $eq: [{ $month: "$date" }, month] };
   }
 
-  return await Reports.find(filter).populate('customerId', 'display_name');
+  return await Reports.find(filter).populate('customerId', 'display_name ');
 };
 
 const getReports= async (year, month, startDate, endDate, filter = {}) => {
@@ -72,7 +72,7 @@ const getReports= async (year, month, startDate, endDate, filter = {}) => {
   }
 
   // 1. Get all customers (filter on isSubscription if needed)
-  const customers = await Customers.find().select('display_name _id contact_number');
+  const customers = await Customers.find({status: {$ne: "NotFound"}}).select('display_name _id contact_number first_name last_name');
 
   // 2. Get all reports for the selected date filter
   const reports = await Reports.find(reportFilter).lean();
@@ -96,10 +96,15 @@ const getReports= async (year, month, startDate, endDate, filter = {}) => {
     };
   });
 
+  const count = result.length;
+
   console.log("res:",result);
   
 
-return result;
+return {
+    count,
+    result
+  };
 };
 
 const generateWaterReports = async (customerId, logIds, docUrl) => {

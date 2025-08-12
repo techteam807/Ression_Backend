@@ -1099,7 +1099,7 @@ const manageCustomerAndProduct = async (
 const getCustomerDropdown = async (filter) => {
   try {
     return await Customer.find(filter)
-      .select("_id display_name contact_number")
+      .select("_id display_name contact_number first_name last_name")
       .lean();
   } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
@@ -1109,7 +1109,7 @@ const getCustomerDropdown = async (filter) => {
 const getCustomerlocations = async (filter) => {
   try {
     return await Customer.find(filter)
-      .select("_id display_name contact_number geoCoordinates")
+      .select("_id display_name contact_number geoCoordinates first_name last_name")
       .lean();
   } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);

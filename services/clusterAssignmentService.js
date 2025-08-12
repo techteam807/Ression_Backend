@@ -136,7 +136,7 @@ const getAssignments = async (filters = {}) => {
                 path: 'clusterId',
                 populate: {
                     path: 'customers.customerId',
-                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size cf_detailed_address'
+                    select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size cf_detailed_address first_name last_name'
                 }
             })
             .sort({ date: 1 })
@@ -285,7 +285,7 @@ const getAllAssignments = async (filters = {}) => {
         const assignments = await ClusterAssignment.find(query)
             .populate('userId', 'user_name')
             .populate('clusterId', 'clusterNo clusterName vehicleNo')
-            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty' })
+            .populate({ path: 'customerStatuses.customerId', select: 'display_name cf_cartridge_qty first_name last_name' })
             .sort({ date: -1 })
             .lean();
 
@@ -424,7 +424,7 @@ const clusterAssignmentById = async (assignmentId) => {
             path: 'clusterId',
             populate: {
                 path: 'customers.customerId',
-                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty cf_cartridge_size'
+                select: 'display_name contact_number cf_google_map_link cf_cartridge_qty first_name last_name cf_cartridge_size'
             }
         })
         .lean();
