@@ -3,13 +3,13 @@ const WaterReportService = require("../services/waterReportsService");
 
 const getWaterReports = async (req, res) => {
   try {
-    let { year, month, startDate, endDate } = req.query;
+    let { year, month, startDate, endDate, search  } = req.query;
 
     // Convert query params to numbers if they exist
     year = year ? parseInt(year) : undefined;
     month = month ? parseInt(month) : undefined;
 
-    const result = await WaterReportService.getReports(year, month, startDate, endDate);
+    const result = await WaterReportService.getReports(year, month, startDate, endDate, search );
 
     return successResponse(
       res,
