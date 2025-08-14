@@ -45,7 +45,7 @@ const getReportsold = async (year, month, filter = {}) => {
   return await Reports.find(filter).populate('customerId', 'display_name ');
 };
 
-const getReports= async (year, month, startDate, endDate, filter = {}) => {
+const getReports= async (year, month, startDate, endDate, search) => {
   const reportFilter = {};
 
   if (year && month) {
@@ -71,8 +71,21 @@ const getReports= async (year, month, startDate, endDate, filter = {}) => {
     }
   }
 
-  // 1. Get all customers (filter on isSubscription if needed)
-  const customers = await Customers.find({status: {$ne: "NotFound"}}).select('display_name _id contact_number first_name last_name');
+  // 2. Build customer search filter
+  const customerFilter = { status: { $ne: "NotFound" } };
+
+  if (search) {
+    customerFilter.$or = [
+      { first_name: { $regex: search, $options: "i" } },
+      { last_name: { $regex: search, $options: "i" } },
+      { display_name: { $regex: search, $options: "i" } },
+      { contact_number: { $regex: search, $options: "i" } }
+    ];
+  }
+
+  // 3. Get customers matching search
+  const customers = await Customers.find(customerFilter)
+    .select("display_name _id contact_number first_name last_name");
 
   // 2. Get all reports for the selected date filter
   const reports = await Reports.find(reportFilter).lean();

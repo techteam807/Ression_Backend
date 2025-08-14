@@ -737,6 +737,11 @@ for (const cluster of clusters) {
 
     // Step 4: Process each cluster
     for (const cluster of clusters) {
+      console.log(
+        "clu:",
+        Array.isArray(cluster.customers) ? cluster.customers.length : 0
+    );
+      
       const filteredCustomers = [];
       const cartridgeSizeCounts = {};
 
@@ -748,14 +753,13 @@ for (const cluster of clusters) {
 
         if (!customer_code || contactNumber === customer_code) {
           cust.customerId = customerData._id;
-          cust.name = customerData.display_name || customerData.name;
+          cust.name = ` ${customerData.first_name} ${customerData.last_name}`;
           cust.contact_number = contactNumber;
           cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
           cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
           const geo = geoMap.get(customerData._id.toString());
-          cust.geoCoordinates = geo || {type: "Point",
-    coordinates: [Number(23.0794),Number(72.3813)]};
+          cust.geoCoordinates = geo;
 
           const size = customerData.cf_cartridge_size || "Unknown";
           const qty = parseInt(customerData.cf_cartridge_qty) || 0;
@@ -784,10 +788,13 @@ for (const cluster of clusters) {
     }
 
         const allClusters = await Cluster.find({}).lean();
+        console.log("all:",allClusters);
+        
     let totalInClusters = 0;
     for (const cluster of allClusters) {
       totalInClusters += cluster.customers.length;
     }
+
     return {
       clusters: filteredClusters,
       totalInClusters,
