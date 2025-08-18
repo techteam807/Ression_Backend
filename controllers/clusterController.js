@@ -1,6 +1,6 @@
 
 const { successResponse, errorResponse } = require("../config/response");
-const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters, fetchOptimizedRoutes } = require("../services/clusterService");
+const { getClusteredCustomerLocations, getAllClusters, reassignMultipleCustomersToClusters, fetchOptimizedRoutes, freeZeClusterCustomers } = require("../services/clusterService");
 
 const getClusteredCustomers = async (req, res) => {
   try {
@@ -72,4 +72,29 @@ return errorResponse(res, error.message || error, 500);
   }
 }; 
 
-module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers, optimizedRoute }
+const clusterCustomersFreeze = async (req, res) => {
+  try {
+    const { clusterId, customerId, isFreezed } = req.body;
+
+    if (!clusterId || !customerId) {
+      return errorResponse(res, "clusterId and customerId are required", 400);
+    }
+
+    const result = await freeZeClusterCustomers(clusterId, customerId, isFreezed);
+
+    if (!result) {
+      return errorResponse(res, "Cluster or Customer not found", 404);
+    }
+
+    return successResponse(
+      res,
+      `Customer ${isFreezed ? 'Freeze' : 'UnFreeze'} successfully`,
+      null,
+      null,
+    );
+  } catch (error) {
+    return errorResponse(res, "Error freezing/unfreezing customer", 500, error);
+  }
+}
+
+module.exports = {reassignMultipleCustomers, getClusters, getClusteredCustomers, optimizedRoute, clusterCustomersFreeze }
