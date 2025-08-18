@@ -1453,9 +1453,18 @@ if (clusterId) {
   return results;
 };
 
+const freeZeClusterCustomers = async (clusterId, customerId, isFreezed) => {
+ return await Cluster.findOneAndUpdate(
+    { _id: clusterId, "customers.customerId": customerId },
+    { $set: { "customers.$.isFreezed": isFreezed } },
+    { new: true }
+  );
+};
+
 module.exports = {
   reassignMultipleCustomersToClusters,
   getAllClusters,
   getClusteredCustomerLocations,
   fetchOptimizedRoutes,
+  freeZeClusterCustomers,
 };

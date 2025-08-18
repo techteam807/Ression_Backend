@@ -33,7 +33,11 @@ const ClusterSchema = new mongoose.Schema(
     indexNo: {
       type: Number,
       default: 0,
-    }
+    },
+    isFreezed: {
+    type: Boolean,
+    default: false,
+    },
   }
 ]
   },
