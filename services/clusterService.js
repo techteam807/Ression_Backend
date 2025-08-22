@@ -712,17 +712,37 @@ if (!isNaN(Number(clusterNo))) {
     //   }
     // }
 
-    let totalInRequestedVehicle = 0;
+//     let totalInRequestedVehicle = 0;
+// for (const cluster of clusters) {
+//   if (cluster.clusterNo !== 7) { // skip cluster 7
+//     totalInRequestedVehicle += cluster.customers.length;
+//   }
+//   for (const cust of cluster.customers) {
+//     if (cust.customerId) {
+//       allCustomerIds.push(cust.customerId._id.toString());
+//     }
+//   }
+// }
+
+let totalInRequestedVehicle = 0;
 for (const cluster of clusters) {
-  if (cluster.clusterNo !== 7) { // skip cluster 7
-    totalInRequestedVehicle += cluster.customers.length;
-  }
-  for (const cust of cluster.customers) {
-    if (cust.customerId) {
-      allCustomerIds.push(cust.customerId._id.toString());
+  if (cluster.clusterNo !== 7) {
+    for (const cust of cluster.customers) {
+      if (cust.customerId) {
+        totalInRequestedVehicle++;
+        allCustomerIds.push(cust.customerId._id.toString());
+      }
+    }
+  } else {
+    // still collect geoData if needed
+    for (const cust of cluster.customers) {
+      if (cust.customerId) {
+        allCustomerIds.push(cust.customerId._id.toString());
+      }
     }
   }
 }
+
 
 
     // Step 3: Bulk fetch GeoLocations
@@ -737,25 +757,37 @@ for (const cluster of clusters) {
 
     // Step 4: Process each cluster
     for (const cluster of clusters) {
+      console.log(
+        "clu:",
+        Array.isArray(cluster.customers) ? cluster.customers.length : 0
+    );
+      
       const filteredCustomers = [];
       const cartridgeSizeCounts = {};
 
       for (const cust of cluster.customers) {
-        if (!cust.customerId) continue;
+      if (!cust.customerId) {
+    console.log("Skipped because customerId missing:", cust);
+    continue;
+  }
 
         const customerData = cust.customerId;
         const contactNumber = customerData.contact_number;
 
+          if (customer_code && contactNumber !== customer_code) {
+    console.log("Skipped due to customer_code filter:", contactNumber);
+    continue;
+  }
+
         if (!customer_code || contactNumber === customer_code) {
           cust.customerId = customerData._id;
-          cust.name = customerData.display_name || customerData.name;
+          cust.name = ` ${customerData.first_name} ${customerData.last_name}`;
           cust.contact_number = contactNumber;
           cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
           cust.cf_cartridge_size = customerData.cf_cartridge_size;
 
           const geo = geoMap.get(customerData._id.toString());
-          cust.geoCoordinates = geo || {type: "Point",
-    coordinates: [Number(23.0794),Number(72.3813)]};
+          cust.geoCoordinates = geo;
 
           const size = customerData.cf_cartridge_size || "Unknown";
           const qty = parseInt(customerData.cf_cartridge_qty) || 0;
@@ -784,10 +816,13 @@ for (const cluster of clusters) {
     }
 
         const allClusters = await Cluster.find({}).lean();
+        console.log("all:",allClusters);
+        
     let totalInClusters = 0;
     for (const cluster of allClusters) {
       totalInClusters += cluster.customers.length;
     }
+
     return {
       clusters: filteredClusters,
       totalInClusters,
@@ -1330,7 +1365,7 @@ async function getOptimizedRouteFromGoogle(warehouse, customers) {
   };
 }
 
-const fetchOptimizedRoutes = async (clusterId,vehicleNo) => {
+const fetchOptimizedRoutesold = async (clusterId,vehicleNo) => {
   let  { clusters } = await getAllClusters();
 
 if (clusterId) {
@@ -1446,9 +1481,143 @@ if (clusterId) {
   return results;
 };
 
+const fetchOptimizedRoutes = async (clusterId, vehicleNo, updateSequence = false) => {
+  let { clusters } = await getAllClusters();
+
+  if (clusterId) {
+    clusters = clusters.filter((cluster) => cluster._id.toString() === clusterId.toString());
+  }
+
+  if (vehicleNo !== undefined && vehicleNo !== null && !isNaN(vehicleNo)) {
+    clusters = clusters.filter((cluster) => cluster.vehicleNo === Number(vehicleNo));
+  }
+
+  const results = [];
+
+  for (const cluster of clusters) {
+    let customers = cluster.customers
+      .filter((c) => c.geoCoordinates && Array.isArray(c.geoCoordinates.coordinates))
+      .map((c) => ({
+        customerId: c.customerId?._id?.toString?.() || c.customerId.toString?.(),
+        name: c.name,
+        indexNo: c.indexNo,
+        coord: {
+          lat: c.geoCoordinates.coordinates[1],
+          lng: c.geoCoordinates.coordinates[0],
+        },
+      }));
+
+    customers = customers.sort((a, b) => a.indexNo - b.indexNo);
+
+    const { route: optimizedRoute, googleRouteData } = await getOptimizedRouteFromGoogle(
+      warehouseLocation,
+      customers
+    );
+
+    const visitSequence = [];
+    let totalDistance = 0;
+
+    // Start at warehouse
+    visitSequence.push({
+      visitNumber: 0,
+      customerName: "Warehouse",
+      lat: warehouseLocation.lat,
+      lng: warehouseLocation.lng,
+      clusterId: cluster.clusterNo,
+      distanceFromPrev: 0,
+    });
+
+    // Visit each customer
+    const updatedCustomers = [];
+    const indexNoMap = new Map(cluster.customers.map((c) => [c.customerId.toString(), c.indexNo]));
+
+    optimizedRoute.forEach((customer, idx) => {
+      const leg = googleRouteData.legs[idx];
+      const dist = leg.distance.value / 1000;
+
+      totalDistance += dist;
+
+      visitSequence.push({
+        visitNumber: idx + 1,
+        customerName: customer.name,
+        lat: customer.coord.lat,
+        lng: customer.coord.lng,
+        clusterId: cluster.clusterNo,
+        distanceFromPrev: dist,
+      });
+
+      if (updateSequence) {
+        updatedCustomers.push({
+          customerId: new mongoose.Types.ObjectId(customer.customerId),
+          sequenceNo: idx + 1,
+          indexNo: indexNoMap.get(customer.customerId.toString()),
+        });
+      }
+    });
+
+    // Return to warehouse
+    const returnLeg = googleRouteData.legs[googleRouteData.legs.length - 1];
+    const returnDist = returnLeg.distance.value / 1000;
+    totalDistance += returnDist;
+
+    visitSequence.push({
+      visitNumber: optimizedRoute.length + 1,
+      customerName: "Return to Warehouse",
+      lat: warehouseLocation.lat,
+      lng: warehouseLocation.lng,
+      clusterId: cluster.clusterNo,
+      distanceFromPrev: returnDist,
+    });
+
+    // Cartridge qty always updated
+    const newQty = cluster.customers.reduce(
+      (sum, c) => sum + (parseFloat(c.cf_cartridge_qty) || 0),
+      0
+    );
+
+    // Update only if updateSequence = true
+    if (updateSequence) {
+      const customersWithoutGeo = cluster.customers.filter(
+        (c) => !c.geoCoordinates || !Array.isArray(c.geoCoordinates.coordinates)
+      );
+
+      const finalCustomers = [...updatedCustomers, ...customersWithoutGeo];
+
+      await Cluster.updateOne(
+        { _id: cluster._id },
+        { $set: { customers: finalCustomers, cartridge_qty: newQty } }
+      );
+    } else {
+      await Cluster.updateOne(
+        { _id: cluster._id },
+        { $set: { cartridge_qty: newQty } }
+      );
+    }
+
+    results.push({
+      clusterId: cluster._id,
+      clusterNo: cluster.clusterNo,
+      cartridge_qty: newQty,
+      totalDistance: totalDistance.toFixed(2),
+      visitSequence,
+    });
+  }
+
+  return results;
+};
+
+const freeZeClusterCustomers = async (clusterId, customerId, isFreezed) => {
+ return await Cluster.findOneAndUpdate(
+    { _id: clusterId, "customers.customerId": customerId },
+    { $set: { "customers.$.isFreezed": isFreezed } },
+    { new: true }
+  );
+};
+
 module.exports = {
   reassignMultipleCustomersToClusters,
   getAllClusters,
   getClusteredCustomerLocations,
   fetchOptimizedRoutes,
+  freeZeClusterCustomers,
 };
