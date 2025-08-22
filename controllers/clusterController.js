@@ -62,6 +62,9 @@ const optimizedRoute = async (req, res) => {
   try{
     const clusterId= req.query.clusterId;
     const vehicleNo= req.query.vehicleNo;
+    console.log("Cluster ID:", clusterId);
+    console.log("Vehicle No:", vehicleNo);
+    
 
  const result = await fetchOptimizedRoutes(clusterId,vehicleNo);
  return successResponse(res, "Customers Routes",null, result);
