@@ -1254,10 +1254,15 @@ const reassignMultipleCustomersToClusters = async (reassignments) => {
       const insertAt = Math.min(indexNo ?? 0, cluster.customers.length);
       const sequenceNo = (cluster.customers?.length || 0) + 1;
 
+      const oldClusterCustomer = originalClusters
+  .flatMap(c => c.customers)
+  .find(c => c.customerId.toString() === customerId);
+
       const newCustomerObj = {
         customerId: new mongoose.Types.ObjectId(customerId),
         indexNo: insertAt,
         sequenceNo,
+        isFreezed: oldClusterCustomer?.isFreezed ?? false,
       };
 
       // cluster.customers.push(newCustomerObj);
@@ -1563,8 +1568,8 @@ const fetchOptimizedRoutes = async (clusterId, vehicleNo, updateSequence = false
     visitSequence.push({
       visitNumber: optimizedRoute.length + 1,
       customerName: "Return to Warehouse",
-      lat: warehouseLocation.lat,
-      lng: warehouseLocation.lng,
+      lat: 23.078985454042574,
+      lng: 72.3820510185093,
       clusterId: cluster.clusterNo,
       distanceFromPrev: returnDist,
     });
