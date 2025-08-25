@@ -21,6 +21,6 @@ const ClusterAssignmentSchema = new mongoose.Schema({
   ]
 }, { timestamps: true });
 
-ClusterAssignmentSchema.index({ technicianId: 1, date: 1 }, { unique: true });
+ClusterAssignmentSchema.index({ userId: 1, date: 1 }, { unique: true });
 
 module.exports = mongoose.model('ClusterAssignment', ClusterAssignmentSchema);

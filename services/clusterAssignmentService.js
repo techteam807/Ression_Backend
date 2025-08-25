@@ -1,6 +1,7 @@
 const ClusterAssignment = require('../models/ClusterAssignmentModel');
 const Cluster = require('../models/clusterModel');
 const { ReplacementStatusEnum } = require('../config/global');
+const { default: mongoose } = require('mongoose');
 
 function getWeek() {
   const now = new Date();
@@ -35,11 +36,15 @@ function getWeek() {
   };
 }
 
-const assignCluster = async (userId, clusterId, date) => {
+const assignCluster = async (userIds, clusterId, date) => {
+    const session = await mongoose.startSession();
+     session.startTransaction();
     try {
 
         const indianDate = new Date(`${date}T00:00:00.000Z`);
+        const assignments = [];
 
+for (const userId of userIds) {
         // Check if user has any other assignments on the same date
         const existingUserDateAssignment = await ClusterAssignment.findOne({
             userId,
@@ -47,7 +52,7 @@ const assignCluster = async (userId, clusterId, date) => {
                 $gte: indianDate,
                 $lt: new Date(indianDate.getTime() + 24 * 60 * 60 * 1000)
             }
-        });
+        },{ session });
 
         if (existingUserDateAssignment) {
             throw new Error('User already has an assignment for this date');
@@ -74,9 +79,17 @@ const assignCluster = async (userId, clusterId, date) => {
             customerStatuses: []
         });
 
-        await clusterAssignment.save();
-        return clusterAssignment;
+        await clusterAssignment.save({ session });
+        assignments.push(clusterAssignment);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return assignments;
     } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
         throw error;
     }
 };
