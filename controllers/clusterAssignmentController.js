@@ -2,9 +2,16 @@ const clusterAssignmentService = require('../services/clusterAssignmentService')
 
 const assignCluster = async (req, res) => {
     try {
-        const { userId, clusterId, date } = req.body;
+        const { userIds, clusterId, date } = req.body;
+
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "userIds must be a non-empty array"
+      });
+    }
         
-        const result = await clusterAssignmentService.assignCluster(userId, clusterId, date);
+        const result = await clusterAssignmentService.assignCluster(userIds, clusterId, date);
         
         res.status(201).json({
             success: true,
