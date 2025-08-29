@@ -2,8 +2,8 @@ const Reports = require("../models/waterReports");
 const Customers = require("../models/customerModel");
 const { sendWaterReportPdf } = require("./whatsappMsgServices");
 const {Storage}= require('@google-cloud/storage');
-// const gcloudCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-const gcloudCredentials = require("../config/key.json");
+const gcloudCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+// const gcloudCredentials = require("../config/key.json");
 
 const storage = new Storage({
   projectId: process.env.GCLOUD_PROJECT,
