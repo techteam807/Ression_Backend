@@ -2,7 +2,8 @@ const Reports = require("../models/waterReports");
 const Customers = require("../models/customerModel");
 const { sendWaterReportPdf } = require("./whatsappMsgServices");
 const {Storage}= require('@google-cloud/storage');
-const gcloudCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+// const gcloudCredentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const gcloudCredentials = require("../config/key.json");
 
 const storage = new Storage({
   projectId: process.env.GCLOUD_PROJECT,
@@ -120,7 +121,7 @@ return {
   };
 };
 
-const generateWaterReports = async (customerId, logIds, docUrl) => {
+const generateWaterReportsold = async (customerId, logIds, docUrl) => {
   const reports = await Reports.find({
     customerId,
     status: false,
@@ -142,6 +143,40 @@ const generateWaterReports = async (customerId, logIds, docUrl) => {
   }
 
   await sendWaterReportPdf(customerMobileNumber, customerName, docUrl);
+
+  return {
+    customerId,
+    totalReportsFound: reportIds.length,
+    reportsUpdated: reportIds.length,
+    updatedReportIds: reportIds,
+  };
+};
+
+const generateWaterReports = async (customerId, logIds, pdfUrl) => {
+  const reports = await Reports.find({
+    customerId,
+    status: false,
+    _id: { $in: logIds },
+  });
+
+  const customer = await Customers.findById(customerId);
+  if (!customer) throw new Error("Customer not found");
+
+  const rawMobile = customer.mobile || "";
+  const customerMobileNumber = rawMobile.replace(/\D/g, "").slice(-10);
+  const customerName = customer.first_name;
+
+  const reportIds = reports.map((r) => r._id);
+
+  if (reportIds.length > 0) {
+    await Reports.updateMany(
+      { _id: { $in: reportIds } },
+      { $set: { status: true } }
+    );
+  }
+
+  // 👇 Send WhatsApp using Gallabox with GCS URL
+  await sendWaterReportPdf(customerMobileNumber, customerName, pdfUrl);
 
   return {
     customerId,
@@ -207,7 +242,7 @@ const deleteWaterReports = async (logId) => {
    }
 };
 
-const uploadPdf = async (buffer, originalName, mimetype) => {
+const uploadPdfold = async (buffer, originalName, mimetype) => {
   if (mimetype !== 'application/pdf') {
     throw new Error("Only PDF Allowed");
   }
@@ -228,6 +263,36 @@ const uploadPdf = async (buffer, originalName, mimetype) => {
   };
 };
 
+const uploadPdf = async (buffer, originalName, mimetype) => {
+  if (mimetype !== "application/pdf") {
+    throw new Error("Only PDF Allowed");
+  }
+
+  const fileName = `${Date.now()}-${originalName.replace(/\s+/g, "_")}`;
+  const file = bucket.file(fileName);
+
+  await file.save(buffer, {
+    resumable: false,
+    contentType: mimetype,
+  });
+
+  const uploadedUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURIComponent(fileName)}`;
+
+  return { uploadedUrl };
+};
 
 
-module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport, deleteWaterReports, uploadPdf };
+const generateWaterReportsForMultipleCustomers = async (customersLogsMap, buffer, originalName, mimetype) => {
+  const results = [];
+
+  for (const customerId of Object.keys(customersLogsMap)) {
+    const logIds = customersLogsMap[customerId];
+    const result = await generateWaterReports(customerId, logIds, buffer, originalName, mimetype);
+    results.push(result);
+  }
+  return results;
+};
+
+
+
+module.exports = { createReports, getReports, generateWaterReports, adminAddOrUpdateWaterReport, deleteWaterReports, uploadPdf, generateWaterReportsForMultipleCustomers };

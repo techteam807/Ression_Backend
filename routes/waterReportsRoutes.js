@@ -13,5 +13,11 @@ router.post('/genrateReports',WaterReportsController.generatWatereReports);
 router.post('/admin-add-or-update', WaterReportsController.adminAddOrUpdate);
 router.delete('/deleteWaterReports/:logId',WaterReportsController.deleteWaterReport);
 router.post('/uploadWaterReportPdf',upload.single('file'),WaterReportsController.uploadPdf);
+router.post(
+  "/uploadWaterReportBulk",
+  upload.array("files"),
+  WaterReportsController.SendMultipleWaterReport
+);
+
 
 module.exports = router;

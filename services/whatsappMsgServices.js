@@ -222,7 +222,7 @@ const sendFirstTimeMsg = async (mobile_number, name) => {
 };
 
 //send waterReports
-const sendWaterReportPdf = async (mobile_number, name, docUrl) => {
+const sendWaterReportPdfold = async (mobile_number, name, docUrl) => {
   console.log(mobile_number, name, docUrl);
   return new Promise((resolve, reject) => {
     const template = {
@@ -249,6 +249,57 @@ const sendWaterReportPdf = async (mobile_number, name, docUrl) => {
         recipient: {
           name: name,
           phone: `91${mobile_number}`,
+        },
+        whatsapp: {
+          type: "template",
+          template, // shorthand for `template: template`
+        },
+      }),
+    };
+
+    request(options, (error, response) => {
+      if (error) {
+        console.error("Error sending WhatsApp Msg:", error);
+        return reject({
+          success: false,
+          message: "Failed to send Msg via WhatsApp.",
+        });
+      }
+      console.log("WhatsApp Message Sent:", response.body);
+      resolve({ success: true, message: "Msg sent successfully." });
+    });
+  });
+};
+
+const sendWaterReportPdf = async (mobile_number, name, pdfUrl) => {
+  console.log(mobile_number, name, pdfUrl);
+  return new Promise((resolve, reject) => {
+    const template = {
+      templateName: GALLABOX_WATERREPORTS,
+      bodyValues: { name: name },
+    };
+
+    if (pdfUrl) {
+      const fileName = path.basename(pdfUrl);
+      template.headerValues = { mediaUrl: pdfUrl, mediaName: fileName };
+    }
+
+    const options = {
+      method: "POST",
+      url: process.env.GALLABOX_URL,
+      headers: {
+        apisecret: process.env.GALLABOX_API_SECRET, // lowercase
+        apikey: process.env.GALLABOX_API_KEY, // lowercase
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channelId: process.env.GALLABOX_CHANNEL_ID,
+        channelType: "whatsapp",
+        recipient: {
+          name: name,
+          // phone: `91${mobile_number}`,
+          phone: `919727410731`,
+
         },
         whatsapp: {
           type: "template",
