@@ -243,8 +243,8 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
     const subscriptions = subscriptionsResponse.data.subscriptions || [];
 
     const subscribedCustomerIds = subscriptions
-    .filter((sub) => sub.status === "live")    
-    .map((sub) => sub.customer_id);
+      .filter((sub) => sub.status === "live")
+      .map((sub) => sub.customer_id);
 
     const subscriptionStatuses = subscriptions.map((sub) => ({
       customer_id: sub.customer_id,
@@ -505,8 +505,7 @@ const getAllcustomers = async (search, page, limit, isSubscription, Day) => {
     filter.cf_replacement_day = Day;
   }
 
-   filter.status = { $ne: "NotFound" };
-
+  filter.status = { $ne: "NotFound" };
 
   const options = {
     skip: (page - 1) * limit,
@@ -1024,6 +1023,7 @@ const manageCustomerAndProduct = async (
 
       // Attach new products and update their status
       Customers.products = NewProducts.map((p) => p._id);
+      Customers.replaceMentCount = Customers.replaceMentCount + 1;
       await Customers.save({ session });
 
       await Product.updateMany(
@@ -1059,13 +1059,19 @@ const manageCustomerAndProduct = async (
         await addCustomerToAssignment(assignmentId, CustomerId, session);
       }
 
-      if (!Customers.installation) {
-        await sendFirstTimeMsg(customerMobileNumber, customerName);
-        Customers.installation = true;
-        await Customers.save({ session });
-      } else {
-        await sendWhatsAppMsg(customerMobileNumber, customerName);
+      if (Customers.replaceMentCount) {
+        if (Customers.replaceMentCount % 2 === 0) {
+          console.log(Customers.replaceMentCount, "is divisible by 2");
+        }
       }
+
+      // if (!Customers.installation) {
+      //   await sendFirstTimeMsg(customerMobileNumber, customerName);
+      //   Customers.installation = true;
+      //   await Customers.save({ session });
+      // } else {
+      //   await sendWhatsAppMsg(customerMobileNumber, customerName);
+      // }
 
       messages.push(
         `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
@@ -1111,7 +1117,9 @@ const getCustomerDropdown = async (filter) => {
 const getCustomerlocations = async (filter) => {
   try {
     return await Customer.find(filter)
-      .select("_id display_name contact_number geoCoordinates first_name last_name")
+      .select(
+        "_id display_name contact_number geoCoordinates first_name last_name"
+      )
       .lean();
   } catch (error) {
     throw new Error("Error in getCustomerDropdown:", error.message);
