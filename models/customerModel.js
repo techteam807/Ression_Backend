@@ -51,6 +51,7 @@ const CustomerSchema = new mongoose.Schema(
     isSubscription:Boolean,
     installation: { type: Boolean, default: false },
     cf_detailed_address:String,
+    replaceMentNotes:{type:String,default:""},
     geoCoordinates: {
       type: { type: String, enum: ['Point']},
       coordinates: { type: [Number] },// [longitude, latitude]  

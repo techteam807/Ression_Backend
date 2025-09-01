@@ -785,6 +785,8 @@ for (const cluster of clusters) {
           cust.contact_number = contactNumber;
           cust.cf_cartridge_qty = customerData.cf_cartridge_qty;
           cust.cf_cartridge_size = customerData.cf_cartridge_size;
+          cust.status = customerData.isSubscription;
+          cust.replaceMentNotes = customerData.replaceMentNotes;
 
           const geo = geoMap.get(customerData._id.toString());
           cust.geoCoordinates = geo;
@@ -1611,12 +1613,47 @@ const fetchOptimizedRoutes = async (clusterId, vehicleNo, updateSequence = false
   return results;
 };
 
-const freeZeClusterCustomers = async (clusterId, customerId, isFreezed) => {
- return await Cluster.findOneAndUpdate(
+const freeZeClusterCustomers = async (clusterId, customerId, isFreezed, replaceMentNotes) => {
+//  return await Cluster.findOneAndUpdate(
+//     { _id: clusterId, "customers.customerId": customerId },
+//     { $set: { "customers.$.isFreezed": isFreezed } },
+//     { new: true }
+//   );
+ // Build update objects dynamically
+  const clusterUpdateObj = {};
+  const customerUpdateObj = {};
+
+  if (typeof isFreezed === "boolean") {
+    clusterUpdateObj["customers.$.isFreezed"] = isFreezed;
+    customerUpdateObj.isFreezed = isFreezed;
+  }
+
+  if (replaceMentNotes) {
+    clusterUpdateObj["customers.$.replaceMentNotes"] = replaceMentNotes;
+    customerUpdateObj.replaceMentNotes = replaceMentNotes;
+  }
+
+  // If no update fields, skip DB calls
+  if (Object.keys(clusterUpdateObj).length === 0 && Object.keys(customerUpdateObj).length === 0) {
+    return false;
+  }
+
+  const clusterUpdate = await Cluster.findOneAndUpdate(
     { _id: clusterId, "customers.customerId": customerId },
-    { $set: { "customers.$.isFreezed": isFreezed } },
+    { $set: clusterUpdateObj },
     { new: true }
   );
+
+  const customerUpdate = await Customer.findByIdAndUpdate(
+    customerId,
+    { $set: customerUpdateObj },
+    { new: true }
+  );
+
+  if (!clusterUpdate || !customerUpdate) {
+    return false;
+  }
+  return { clusterUpdate, customerUpdate };
 };
 
 module.exports = {
