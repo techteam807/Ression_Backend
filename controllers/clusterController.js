@@ -93,7 +93,7 @@ const clusterCustomersFreeze = async (req, res) => {
     if (typeof isFreezed === "boolean") {
       messageParts.push(`Customer ${isFreezed ? "Freeze" : "UnFreeze"} successfully`);
     }
-    if (replaceMentNotes) {
+    if (replaceMentNotes !== undefined) {
       messageParts.push(`Replacement notes updated`);
     }
 
