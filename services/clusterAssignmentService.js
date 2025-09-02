@@ -39,6 +39,17 @@ function getWeek() {
   };
 }
 
+function getMonth() {
+  const today = new Date();
+  const y = today.getUTCFullYear();
+  const m = today.getUTCMonth();
+
+  const start = new Date(Date.UTC(y, m, 1));                  // 1st of month
+  const end = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999)); // last day of month
+
+  return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
+}
+
 const assignCluster = async (userIds, clusterId, date) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -281,41 +292,86 @@ const getAllAssignments = async (filters = {}) => {
     }
 
     if (filters.startDate && filters.endDate) {
-      try {
-        const indiaTz = "Asia/Kolkata";
+  try {
+    // Directly append IST offset (+05:30)
+    const start = new Date(`${filters.startDate}T00:00:00.000+05:30`);
+    const end = new Date(`${filters.endDate}T23:59:59.999+05:30`);
 
-        const start = new Date(
-          new Date(filters.startDate + "T00:00:00").toLocaleString("en-US", {
-            timeZone: indiaTz,
-          })
-        );
-        const end = new Date(
-          new Date(filters.endDate + "T23:59:59").toLocaleString("en-US", {
-            timeZone: indiaTz,
-          })
-        );
+    query.date = {
+      $gte: start,
+      $lte: end,
+    };
+  } catch (dateError) {
+    throw new Error("Invalid date format provided");
+  }
+} else {
+  // Default to full current month
+  const { start, end } = getMonth();
 
-        // Convert back to UTC (Mongo stores in UTC)
-        const indianStartDate = new Date(start.toISOString());
-        const indianEndDate = new Date(end.toISOString());
+  const startDate = new Date(`${start}T00:00:00.000+05:30`);
+  const endDate = new Date(`${end}T23:59:59.999+05:30`);
 
-        query.date = {
-          $gte: indianStartDate,
-          $lte: indianEndDate,
-        };
-      } catch (dateError) {
-        throw new Error("Invalid date format provided");
-      }
-    } else {
-      const { start, end } = getWeek();
-      startDate = start;
-      endDate = end;
+  query.date = {
+    $gte: startDate,
+    $lte: endDate,
+  };
+}
 
-      query.date = {
-        $gte: startDate,
-        $lte: endDate,
-      };
-    }
+    // if (filters.startDate && filters.endDate) {
+    //   try {
+    //     const indiaTz = "Asia/Kolkata";
+
+    //     const start = new Date(
+    //       new Date(filters.startDate + "T00:00:00").toLocaleString("en-US", {
+    //         timeZone: indiaTz,
+    //       })
+    //     );
+    //     const end = new Date(
+    //       new Date(filters.endDate + "T23:59:59").toLocaleString("en-US", {
+    //         timeZone: indiaTz,
+    //       })
+    //     );
+
+    //     // Convert back to UTC (Mongo stores in UTC)
+    //     const indianStartDate = new Date(start.toISOString());
+    //     const indianEndDate = new Date(end.toISOString());
+
+    //     query.date = {
+    //       $gte: indianStartDate,
+    //       $lte: indianEndDate,
+    //     };
+    //   } catch (dateError) {
+    //     throw new Error("Invalid date format provided");
+    //   }
+    // } else {
+    //   const { start, end } = getMonth();
+    //   const indiaTz = "Asia/Kolkata";
+    //   startDate = new Date(
+    //     new Date(start + "T00:00:00").toLocaleString("en-US", {
+    //       timeZone: indiaTz,
+    //     })
+    //   );
+    //   endDate = new Date(
+    //     new Date(end + "T23:59:59").toLocaleString("en-US", {
+    //       timeZone: indiaTz,
+    //     })
+    //   );
+
+    //   query.date = {
+    //     $gte: startDate,
+    //     $lte: endDate,
+    //   };
+    // }
+    // else {
+    //   const { start, end } = getWeek();
+    //   startDate = start;
+    //   endDate = end;
+
+    //   query.date = {
+    //     $gte: startDate,
+    //     $lte: endDate,
+    //   };
+    // }
 
     // Get all assignments based on filters with complete population
     const assignments = await ClusterAssignment.find(query)
