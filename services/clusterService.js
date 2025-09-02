@@ -1614,6 +1614,8 @@ const fetchOptimizedRoutes = async (clusterId, vehicleNo, updateSequence = false
 };
 
 const freeZeClusterCustomers = async (clusterId, customerId, isFreezed, replaceMentNotes) => {
+  // console.log("freeze:", clusterId, customerId, isFreezed, replaceMentNotes);
+  
 //  return await Cluster.findOneAndUpdate(
 //     { _id: clusterId, "customers.customerId": customerId },
 //     { $set: { "customers.$.isFreezed": isFreezed } },
@@ -1628,7 +1630,7 @@ const freeZeClusterCustomers = async (clusterId, customerId, isFreezed, replaceM
     customerUpdateObj.isFreezed = isFreezed;
   }
 
-  if (replaceMentNotes) {
+  if (replaceMentNotes !== undefined) {
     clusterUpdateObj["customers.$.replaceMentNotes"] = replaceMentNotes;
     customerUpdateObj.replaceMentNotes = replaceMentNotes;
   }
