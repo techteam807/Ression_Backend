@@ -871,6 +871,7 @@ const manageCustomerAndProduct = async (
   userId,
   geoCoordinates,
   url,
+  fitterCleaningurl,
   score,
   assignmentId
 ) => {
@@ -1065,14 +1066,18 @@ const manageCustomerAndProduct = async (
         }
       }
 
-      // if (!Customers.installation) {
-      //   await sendFirstTimeMsg(customerMobileNumber, customerName);
-      //   Customers.installation = true;
-      //   await Customers.save({ session });
-      // } else {
-      //   await sendWhatsAppMsg(customerMobileNumber, customerName);
-      // }
+      if (!Customers.installation) {
+        await sendFirstTimeMsg(customerMobileNumber, customerName);
+        Customers.installation = true;
+        await Customers.save({ session });
+      } else {
+        await sendWhatsAppMsg(customerMobileNumber, customerName);
+      }
 
+      if(fitterCleaningurl){
+        console.log("fitterCleaningurl",fitterCleaningurl);
+      }
+      
       messages.push(
         `Product attached to Customer for codes: ${NewProductCodes.join(", ")}`
       );

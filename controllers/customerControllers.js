@@ -102,7 +102,7 @@ const ManageCustomerAndProductsone = async(req, res) => {
 const ManageCustomerAndProducts = async(req, res) => {
   try {
 
-    const { customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId } = req.body;
+    const { customer_code, Product_Codes, userId, geoCoordinates, url, score, assignmentId, fitterCleaningurl } = req.body;
 
     if (!Array.isArray(Product_Codes) || Product_Codes.length === 0) {
       return errorResponse(res, "Invalid Data Pass", 400, null);
@@ -113,7 +113,7 @@ const ManageCustomerAndProducts = async(req, res) => {
     //   return errorResponse(res, "AssignmentId Not Provided", 400, null);
     // }
 
-    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url, score, assignmentId);
+    const result = await manageCustomerAndProduct(customer_code, Product_Codes, userId,geoCoordinates, url, score, assignmentId, fitterCleaningurl);
 
         // if (result.success) {
     //   return successResponse(res, result.message, null, null);
