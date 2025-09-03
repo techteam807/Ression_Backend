@@ -242,7 +242,9 @@ const fetchAndStoreCustomersWithRefresh = async (accessToken) => {
 
     const subscriptions = subscriptionsResponse.data.subscriptions || [];
 
-    const subscribedCustomerIds = subscriptions.map((sub) => sub.customer_id);
+    const subscribedCustomerIds = subscriptions
+    .filter((sub) => sub.status === "live")    
+    .map((sub) => sub.customer_id);
 
     const subscriptionStatuses = subscriptions.map((sub) => ({
       customer_id: sub.customer_id,

@@ -77,21 +77,30 @@ return errorResponse(res, error.message || error, 500);
 
 const clusterCustomersFreeze = async (req, res) => {
   try {
-    const { clusterId, customerId, isFreezed } = req.body;
+    const { clusterId, customerId, isFreezed, replaceMentNotes  } = req.body;
 
     if (!clusterId || !customerId) {
       return errorResponse(res, "clusterId and customerId are required", 400);
     }
 
-    const result = await freeZeClusterCustomers(clusterId, customerId, isFreezed);
+    const result = await freeZeClusterCustomers(clusterId, customerId, isFreezed, replaceMentNotes);
 
     if (!result) {
       return errorResponse(res, "Cluster or Customer not found", 404);
     }
 
+    let messageParts = [];
+    if (typeof isFreezed === "boolean") {
+      messageParts.push(`Customer ${isFreezed ? "frozen" : "unfrozen"} successfully`);
+    }
+    if (replaceMentNotes !== undefined) {
+      messageParts.push(`Replacement notes updated.`);
+    }
+
     return successResponse(
       res,
-      `Customer ${isFreezed ? 'Freeze' : 'UnFreeze'} successfully`,
+      // `Customer ${isFreezed ? 'Freeze' : 'UnFreeze'} successfully`,
+      messageParts.join(" | "),
       null,
       null,
     );
