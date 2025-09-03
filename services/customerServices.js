@@ -871,9 +871,9 @@ const manageCustomerAndProduct = async (
   userId,
   geoCoordinates,
   url,
-  fitterCleaningurl,
   score,
-  assignmentId
+  assignmentId,
+  fitterCleaningurl,
 ) => {
   const session = await mongoose.startSession();
   session.startTransaction();
